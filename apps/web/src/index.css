@@ -1,0 +1,128 @@
+:root {
+  --canvas: #eeeffb;
+  --surface: #ffffff;
+  --surface-2: #f4f6fd;
+  --sidebar: #0d1b37;
+  --primary: #1462ea;
+  --indigo: #4a4fc5;
+  --green: #0eae50;
+  --azure: #319ad6;
+  --orange: #f16a0f;
+  --amber: #f8a955;
+  --purple: #9b6bd7;
+  --red: #e04848;
+  --text: #445868;
+  --text-strong: #0d1b37;
+  --muted: #7c8db5;
+  --border: rgba(13, 27, 55, 0.08);
+  --radius: 16px;
+  --sidebar-width: 250px;
+  --shadow: 0 10px 30px rgba(28, 45, 84, 0.08);
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --canvas: #0c162d;
+  --surface: #15224b;
+  --surface-2: #1c2d63;
+  --sidebar: #081024;
+  --primary: #4143d4;
+  --indigo: #4143d4;
+  --green: #22b052;
+  --azure: #2ea8be;
+  --orange: #f0ab43;
+  --amber: #f0ab43;
+  --purple: #ab5bc4;
+  --red: #d44b43;
+  --text: #cbd5e1;
+  --text-strong: #ffffff;
+  --muted: #7b86b2;
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow: 0 16px 34px rgba(3, 8, 20, 0.45);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: 'Inter', 'Avenir Next', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+h1,
+h2,
+h3,
+p {
+  overflow-wrap: break-word;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.caption {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(124, 141, 181, 0.35);
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

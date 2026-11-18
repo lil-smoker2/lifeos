@@ -1,0 +1,20 @@
+node_modules/
+dist/
+dist-ssr/
+*.local
+.DS_Store
+
+# Environment and secrets
+.env
+.env.*
+*.key
+
+# Python backend (Phase 4)
+.venv/
+__pycache__/
+*.pyc
+*.db
+
+# Tool state
+.kilo/
+.vscode/
