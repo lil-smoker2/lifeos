@@ -31,11 +31,20 @@ cat > "$LAUNCHER" <<LAUNCHER_EOF
 set -euo pipefail
 
 WEB_DIR="$WEB_DIR"
+API_DIR="$REPO_DIR/apps/api"
 PORT="\${LIFEOS_PORT:-4173}"
 URL="http://localhost:\$PORT/"
 STATE_DIR="\${XDG_STATE_HOME:-\$HOME/.local/state}/lifeos"
 LOG="\$STATE_DIR/server.log"
 mkdir -p "\$STATE_DIR"
+
+if ! curl -sf "http://localhost:8000/api/health" >/dev/null 2>&1 && [ -x "\$API_DIR/.venv/bin/uvicorn" ]; then
+  ( cd "\$API_DIR" && nohup .venv/bin/uvicorn app.main:app --port 8000 >>"\$STATE_DIR/api.log" 2>&1 & )
+  for _ in \$(seq 1 60); do
+    curl -sf "http://localhost:8000/api/health" >/dev/null 2>&1 && break
+    sleep 0.25
+  done
+fi
 
 if ! curl -sf "\$URL" >/dev/null 2>&1; then
   ( cd "\$WEB_DIR" && nohup npm run preview -- --port "\$PORT" --strictPort >>"\$LOG" 2>&1 & )

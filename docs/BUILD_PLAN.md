@@ -46,8 +46,11 @@ CORS for the dev and installed app origins, a Vite `/api` proxy and a combined
 entities plus a baseline Alembic migration. Phase 4.3 adds JWT auth with
 bcrypt passwords and a bearer-token user dependency.
 
-**Not started:** real persistence and the auth-aware frontend, PWA / desktop
-packaging, and the automation engine beyond frontend simulation.
+Phase 4.4 adds a typed API client, TanStack Query, JWT-backed sessions and
+guarded routes with public welcome/login/register pages.
+
+**Not started:** real persistence for module data, PWA / desktop packaging,
+and the automation engine beyond frontend simulation.
 
 This means the app currently behaves like a polished offline demo: everything
 is editable and survives refresh (per browser), but nothing syncs between
@@ -116,7 +119,7 @@ lifesmart/
 │     ├─ package.json
 │     ├─ vite.config.ts
 │     └─ src/
-│        ├─ App.tsx                 # route table
+│        ├─ App.tsx                 # route table + providers
 │        ├─ main.tsx                # React root
 │        ├─ index.css               # design tokens + base styles
 │        ├─ App.css                 # imports styles/*
@@ -124,17 +127,23 @@ lifesmart/
 │        │  ├─ layout.css           # shell, sidebar, topbar, breakpoints
 │        │  ├─ dashboard.css        # hero, stat cards, widgets, matrix
 │        │  └─ pages.css            # module pages, tables, forms, chat
-│        ├─ features/theme/ThemeProvider.tsx, theme-context.ts
-│        ├─ layouts/AppShell.tsx    # sidebar + topbar + routed outlet
+│        ├─ features/
+│        │  ├─ auth/AuthProvider.tsx, auth-context.ts
+│        │  └─ theme/ThemeProvider.tsx, theme-context.ts
+│        ├─ services/api.ts         # typed fetch client + token storage
+│        ├─ layouts/
+│        │  ├─ AppShell.tsx         # sidebar + topbar + routed outlet
+│        │  └─ AuthLayout.tsx       # public split-screen shell
 │        ├─ components/
 │        │  ├─ DonutRing.tsx
-│        │  └─ PageHeader.tsx
+│        │  ├─ PageHeader.tsx
+│        │  └─ RequireAuth.tsx
 │        ├─ lib/
 │        │  ├─ seed.ts              # types, seed data, money/progress helpers
 │        │  ├─ navigation.ts        # nav model shared by shell and search
 │        │  ├─ search.ts            # grouped search across records
 │        │  └─ useLocalStore.ts     # localStorage-backed useState
-│        └─ pages/                  # Dashboard + 13 module pages + notifications
+│        └─ pages/                  # Dashboard, modules, notifications, auth pages
 │  └─ api/                          # FastAPI backend (Phase 4)
 │     ├─ requirements.txt
 │     ├─ .venv/                     # local only, git-ignored
@@ -208,7 +217,7 @@ lifesmart/
 | 4.1 | FastAPI scaffold and health check | ✅ |
 | 4.2 | Database, models and migrations | ✅ |
 | 4.3 | Auth (register, login, JWT) | ✅ |
-| 4.4 | API client and auth-aware frontend | ⬜ |
+| 4.4 | API client and auth-aware frontend | ✅ |
 | 4.5 | Persist tasks and events | ⬜ |
 | 4.6 | Persist finance, learning, goals, health | ⬜ |
 | 4.7 | Persist notes and files (upload) | ⬜ |
@@ -501,12 +510,18 @@ token and 401 without one. Stored passwords begin with `$2b$` (bcrypt), never
 plaintext.
 
 ### STEP 4.4 — API client and auth-aware frontend
-**STATUS:** ⬜ pending
-**GOAL:** Replace `useLocalStore` reads with API queries.
-**BUILD:** `src/services/api.ts` fetch wrapper, TanStack Query provider,
-`AuthProvider`, login/register routes, guarded `/app` area.
-**VERIFY:** Logging in loads the dashboard with server data; logging out
-returns to the welcome page.
+**STATUS:** ✅
+**GOAL:** Accounts gate the app, and modules can move to API queries.
+**BUILD:** `src/services/api.ts` (typed fetch wrapper, bearer token in
+`lifeos.token`, `ApiError`); TanStack Query provider; `AuthProvider` with
+session bootstrap via `/auth/me`; public `/welcome`, `/login` and `/register`
+pages under `AuthLayout`; `RequireAuth` guard redirecting anonymous visitors;
+sign-out in the topbar and Settings; Vite preview proxy for `/api`; the
+desktop launcher now starts the API when it is not already running.
+**VERIFY:** Visiting `/` while logged out renders the welcome page; signing in
+returns to the intended route; the token survives reload through `/auth/me`;
+signing out returns to `/welcome`. Headless Chromium renders the welcome
+headline and the proxied login endpoint returns a token.
 
 ### STEP 4.5 — Persist tasks and events
 **STATUS:** ⬜ pending
@@ -588,10 +603,9 @@ data persists between launches.
 
 ## Next recommended step
 
-**4.4 — API client and auth-aware frontend.** Auth is live on the API. Next,
-add the fetch client, TanStack Query, an `AuthProvider` with login/register
-pages and guarded routes, so module data can move off `localStorage` in the
-following steps.
+**4.5 — Persist tasks and events.** Auth-aware frontend is live. Next, add
+`/api/tasks` and `/api/events` CRUD routers scoped to the signed-in user, then
+switch the tasks and planner pages to TanStack Query.
 
 ---
 

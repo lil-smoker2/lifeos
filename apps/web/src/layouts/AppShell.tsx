@@ -1,6 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Bell, Command, Moon, Search, Star, Sun } from 'lucide-react'
+import { Bell, Command, LogOut, Moon, Search, Star, Sun } from 'lucide-react'
+import { useAuth } from '../features/auth/auth-context'
 import { useTheme } from '../features/theme/theme-context'
 import { NAV_ITEMS } from '../lib/navigation'
 import { searchRecords, type SearchHit } from '../lib/search'
@@ -47,6 +48,7 @@ function PageFallback() {
 
 export function AppShell() {
   const { isDark } = useTheme()
+  const { logout } = useAuth()
   const navigate = useNavigate()
   const [profile] = useLocalStore<Profile>(STORE_KEYS.profile, seedProfile)
   const [tasks] = useLocalStore<Task[]>(STORE_KEYS.tasks, seedTasks)
@@ -109,6 +111,11 @@ export function AppShell() {
     navigate(path)
     closeSearch()
     searchRef.current?.blur()
+  }
+
+  function signOut() {
+    logout()
+    navigate('/welcome', { replace: true })
   }
 
   function openAlert(alert: Alert) {
@@ -290,6 +297,10 @@ export function AppShell() {
                 <span>{profile.role}</span>
               </div>
             </div>
+
+            <button className="icon-btn" type="button" aria-label="Sign out" onClick={signOut}>
+              <LogOut size={18} />
+            </button>
           </div>
         </header>
 

@@ -1,12 +1,16 @@
 import { useState, type FormEvent } from 'react'
-import { Check, Moon, RotateCcw, Sun } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Check, LogOut, Moon, RotateCcw, Sun } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
+import { useAuth } from '../features/auth/auth-context'
 import { useTheme } from '../features/theme/theme-context'
 import { STORE_KEYS, seedProfile, type Profile } from '../lib/seed'
 import { useLocalStore } from '../lib/useLocalStore'
 
 export function SettingsPage() {
   const { theme, setTheme } = useTheme()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [profile, setProfile] = useLocalStore<Profile>(STORE_KEYS.profile, seedProfile)
   const [draft, setDraft] = useState(profile)
   const [saved, setSaved] = useState(false)
@@ -50,6 +54,21 @@ export function SettingsPage() {
         </section>
 
         <div className="settings-side">
+          <section className="card">
+            <header className="card-head"><h2>Account</h2><p>{user?.email}</p></header>
+            <p className="note">Signed in with a JWT session that lasts 24 hours. Module data is still stored in this browser until Phase 4.5.</p>
+            <button
+              className="btn btn-ghost danger"
+              type="button"
+              onClick={() => {
+                logout()
+                navigate('/welcome', { replace: true })
+              }}
+            >
+              <LogOut size={15} /> Sign out
+            </button>
+          </section>
+
           <section className="card">
             <header className="card-head"><h2>Appearance</h2><p>Saved on this device</p></header>
             <div className="theme-choice">

@@ -12,6 +12,10 @@ if pgrep -f "vite preview --port 4173" >/dev/null 2>&1; then
   pkill -f "vite preview --port 4173" || true
 fi
 
+if pgrep -f "uvicorn app.main:app --port 8000" >/dev/null 2>&1; then
+  pkill -f "uvicorn app.main:app --port 8000" || true
+fi
+
 rm -rf "$APP_DIR"
 rm -f "$LAUNCHER" "$DESKTOP_FILE"
 
