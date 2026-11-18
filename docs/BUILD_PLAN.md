@@ -43,10 +43,11 @@ the built app on port 4173.
 **Backend started:** Phase 4.1 adds a FastAPI scaffold with `/api/health`,
 CORS for the dev and installed app origins, a Vite `/api` proxy and a combined
 `scripts/dev.sh` runner. Phase 4.2 adds SQLAlchemy models for all thirteen
-entities plus a baseline Alembic migration.
+entities plus a baseline Alembic migration. Phase 4.3 adds JWT auth with
+bcrypt passwords and a bearer-token user dependency.
 
-**Not started:** auth, real persistence, PWA / desktop packaging, and the
-automation engine beyond frontend simulation.
+**Not started:** real persistence and the auth-aware frontend, PWA / desktop
+packaging, and the automation engine beyond frontend simulation.
 
 This means the app currently behaves like a polished offline demo: everything
 is editable and survives refresh (per browser), but nothing syncs between
@@ -142,10 +143,15 @@ lifesmart/
 │     └─ app/
 │        ├─ main.py                 # app factory, CORS, routers
 │        ├─ models.py               # SQLAlchemy models for every module
-│        ├─ api/health.py           # GET /api/health
+│        ├─ schemas/auth.py         # request/response models
+│        ├─ api/
+│        │  ├─ health.py            # GET /api/health
+│        │  └─ auth.py              # register, login, me
 │        └─ core/
 │           ├─ config.py            # pydantic-settings configuration
-│           └─ database.py          # engine, session factory, Base, get_db
+│           ├─ database.py          # engine, session factory, Base, get_db
+│           ├─ deps.py              # bearer-token user dependency
+│           └─ security.py          # bcrypt hashing + JWT helpers
 ├─ docs/
 │  └─ BUILD_PLAN.md                 # this file
 ├─ scripts/
@@ -201,7 +207,7 @@ lifesmart/
 |---|---|---|
 | 4.1 | FastAPI scaffold and health check | ✅ |
 | 4.2 | Database, models and migrations | ✅ |
-| 4.3 | Auth (register, login, JWT) | ⬜ |
+| 4.3 | Auth (register, login, JWT) | ✅ |
 | 4.4 | API client and auth-aware frontend | ⬜ |
 | 4.5 | Persist tasks and events | ⬜ |
 | 4.6 | Persist finance, learning, goals, health | ⬜ |
@@ -481,12 +487,18 @@ the settings URL and `Base.metadata`) with a baseline migration.
 the homepage still loads.
 
 ### STEP 4.3 — Auth (register, login, JWT)
-**STATUS:** ⬜ pending
+**STATUS:** ✅
 **GOAL:** Per-user data.
-**BUILD:** `POST /api/auth/register`, `POST /api/auth/login`,
-`GET /api/auth/me`, hashing and token dependencies.
-**VERIFY:** Register and log in through `/docs`; `/api/auth/me` returns the
-user.
+**BUILD:** `app/core/security.py` (bcrypt hashing, PyJWT access tokens),
+`app/core/deps.py` (`get_current_user` via HTTP bearer), `app/schemas/auth.py`
+and `app/api/auth.py`: `POST /api/auth/register`, `POST /api/auth/login` and
+`GET /api/auth/me`. Emails are normalised and unique (409 on duplicates),
+bad credentials return 401, and tokens carry `sub`, `iat` and `exp`
+(24-hour lifetime).
+**VERIFY:** Registering returns a token and user; duplicate registration is
+409; wrong password is 401; `/api/auth/me` returns the user with a bearer
+token and 401 without one. Stored passwords begin with `$2b$` (bcrypt), never
+plaintext.
 
 ### STEP 4.4 — API client and auth-aware frontend
 **STATUS:** ⬜ pending
@@ -576,9 +588,10 @@ data persists between launches.
 
 ## Next recommended step
 
-**4.3 — Auth (register, login, JWT).** The schema and migrations are in
-place. Next, add password hashing and JWT endpoints so ownership (`user_id`)
-can be enforced before module data is moved off `localStorage`.
+**4.4 — API client and auth-aware frontend.** Auth is live on the API. Next,
+add the fetch client, TanStack Query, an `AuthProvider` with login/register
+pages and guarded routes, so module data can move off `localStorage` in the
+following steps.
 
 ---
 
