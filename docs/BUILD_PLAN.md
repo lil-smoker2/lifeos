@@ -40,8 +40,12 @@ route-level code splitting. `npm run build` (TypeScript + Vite) and
 Phase 1 build is installed as a desktop launcher named **LifeOS** that serves
 the built app on port 4173.
 
-**Not started:** the FastAPI backend, database, auth, real persistence, PWA /
-desktop packaging, and the automation engine beyond frontend simulation.
+**Backend started:** Phase 4.1 adds a FastAPI scaffold with `/api/health`,
+CORS for the dev and installed app origins, a Vite `/api` proxy and a combined
+`scripts/dev.sh` runner.
+
+**Not started:** the database, auth, real persistence, PWA / desktop
+packaging, and the automation engine beyond frontend simulation.
 
 This means the app currently behaves like a polished offline demo: everything
 is editable and survives refresh (per browser), but nothing syncs between
@@ -57,6 +61,23 @@ npm run build        # tsc -b && vite build
 npm run lint         # oxlint
 ```
 
+API (Phase 4.1):
+
+```bash
+cd /home/david/Documents/lifesmart/apps/api
+source .venv/bin/activate
+pip install -r requirements.txt   # first run only
+uvicorn app.main:app --reload --port 8000
+# docs: http://localhost:8000/docs · health: /api/health
+```
+
+Run both servers together:
+
+```bash
+cd /home/david/Documents/lifesmart
+bash scripts/dev.sh
+```
+
 Phase 1 is also installed as a local desktop launcher (see Step 1.6):
 
 ```bash
@@ -66,9 +87,9 @@ lifeos                         # launch at http://localhost:4173/
 bash scripts/uninstall_app.sh  # remove the installed copy
 ```
 
-There is **no git repository** in this folder yet and no `apps/api` yet; the
-old `scripts/build_app.sh` path and `~/.local/bin/lifesmart` binary referenced
-by earlier memory are stale and unrelated to the current frontend.
+The repo is tracked on GitHub at `lil-smoker2/lifeos`. The old
+`scripts/build_app.sh` path and `~/.local/bin/lifesmart` binary referenced by
+earlier memory are stale and unrelated to the current project.
 
 ---
 
@@ -110,9 +131,17 @@ lifesmart/
 │        │  ├─ search.ts            # grouped search across records
 │        │  └─ useLocalStore.ts     # localStorage-backed useState
 │        └─ pages/                  # Dashboard + 13 module pages + notifications
+│  └─ api/                          # FastAPI backend (Phase 4)
+│     ├─ requirements.txt
+│     ├─ .venv/                     # local only, git-ignored
+│     └─ app/
+│        ├─ main.py                 # app factory, CORS, routers
+│        ├─ api/health.py           # GET /api/health
+│        └─ core/config.py          # pydantic-settings configuration
 ├─ docs/
 │  └─ BUILD_PLAN.md                 # this file
 ├─ scripts/
+│  ├─ dev.sh                        # run API + web together
 │  ├─ install_app.sh                # build + install desktop launcher
 │  └─ uninstall_app.sh              # remove launcher and installed files
 └─ *.png / *.jpeg                   # design references
@@ -162,7 +191,7 @@ lifesmart/
 
 | Step | Name | Status |
 |---|---|---|
-| 4.1 | FastAPI scaffold and health check | ⬜ |
+| 4.1 | FastAPI scaffold and health check | ✅ |
 | 4.2 | Database, models and migrations | ⬜ |
 | 4.3 | Auth (register, login, JWT) | ⬜ |
 | 4.4 | API client and auth-aware frontend | ⬜ |
@@ -419,12 +448,16 @@ module pages 2–6 kB) and the shared entry is ~286 kB instead of a single
 # PHASE 4 — Backend and real persistence
 
 ### STEP 4.1 — FastAPI scaffold and health check
-**STATUS:** ⬜ pending
+**STATUS:** ✅
 **GOAL:** A backend the frontend can talk to.
-**BUILD:** `apps/api/app/main.py`, `app/core/config.py`, `/api/health`, CORS
-for `http://localhost:5173`, Vite proxy for `/api`.
-**VERIFY:** `GET http://localhost:8000/api/health` returns `{"status":"ok"}`
-and the homepage still loads.
+**BUILD:** `apps/api/app/main.py` (FastAPI app, CORS, health router),
+`app/core/config.py` (pydantic-settings with `LIFEOS_` env prefix and SQLite
+URL), `app/api/health.py` (`GET /api/health`), `requirements.txt`, a Vite
+`/api` proxy to port 8000, and `scripts/dev.sh` to run both servers.
+**VERIFY:** `GET http://localhost:8000/api/health` returns
+`{"status":"ok",...}`; `GET /` lists the docs and health URLs; CORS returns
+`access-control-allow-origin` for `http://localhost:5173`; the homepage still
+loads on 4173/5173.
 
 ### STEP 4.2 — Database, models and migrations
 **STATUS:** ⬜ pending
@@ -530,11 +563,9 @@ data persists between launches.
 
 ## Next recommended step
 
-**4.1 — FastAPI scaffold.** Phase 3 is complete (search, notifications,
-responsive layout, accessibility, code splitting). The highest-value next
-move is standing up the API and health check so Phase 4 persistence can
-proceed one module at a time. Until then the frontend is the reference
-implementation for every data shape in `src/lib/seed.ts`.
+**4.2 — Database, models and migrations.** Phase 4.1 is running. Next, add
+SQLAlchemy models mirroring `src/lib/seed.ts` plus Alembic so each module can
+be moved from `localStorage` to the API one slice at a time.
 
 ---
 
