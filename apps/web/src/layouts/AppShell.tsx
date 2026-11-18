@@ -1,28 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Bell, Command, Moon, Search, Star, Sun } from 'lucide-react'
+import { useTheme } from '../features/theme/theme-context'
+import { NAV_ITEMS } from '../lib/navigation'
+import { searchRecords, type SearchHit } from '../lib/search'
 import {
-  Bell, BookOpen, Bot, CalendarDays, Command, FolderOpen, GraduationCap,
-  Heart, HelpCircle, LayoutDashboard, Moon, Search, Settings, Star, Sun,
-  Target, WalletCards, Zap,
-} from 'lucide-react'
-import { useTheme } from '../features/theme/ThemeProvider'
-import { STORE_KEYS, seedProfile, type Profile } from '../lib/seed'
+  STORE_KEYS, seedAlerts, seedEvents, seedFiles, seedNotes, seedProfile,
+  seedTasks, type Alert, type EventItem, type FileDoc, type Note, type Profile,
+  type Task,
+} from '../lib/seed'
 import { useLocalStore } from '../lib/useLocalStore'
 
-export const NAV_ITEMS = [
-  { to: '/', label: 'Home', icon: LayoutDashboard, end: true },
-  { to: '/planner', label: 'Planner', icon: CalendarDays },
-  { to: '/learning', label: 'Study & Learning', icon: GraduationCap },
-  { to: '/finance', label: 'Finance', icon: WalletCards },
-  { to: '/health', label: 'Health & Fitness', icon: Heart },
-  { to: '/notes', label: 'Notes & Knowledge', icon: BookOpen },
-  { to: '/files', label: 'Files & Documents', icon: FolderOpen },
-  { to: '/goals', label: 'Goals & Habits', icon: Target },
-  { to: '/ai', label: 'AI Assistant', icon: Bot, badge: 'New' },
-  { to: '/automation', label: 'Automation', icon: Zap },
-  { to: '/settings', label: 'Settings', icon: Settings },
-  { to: '/help', label: 'Help & Support', icon: HelpCircle },
-]
+const ALERT_ROUTES: Record<Alert['kind'], string> = {
+  task: '/tasks',
+  finance: '/finance',
+  note: '/notes',
+  system: '/automation',
+}
 
 function ThemeSwitch() {
   const { isDark, toggleTheme } = useTheme()
@@ -40,38 +34,91 @@ function ThemeSwitch() {
   )
 }
 
+function PageFallback() {
+  return (
+    <div className="page" aria-busy="true">
+      <div className="card route-loader">
+        <span className="loader-dot" />
+        Loading view...
+      </div>
+    </div>
+  )
+}
+
 export function AppShell() {
   const { isDark } = useTheme()
   const navigate = useNavigate()
   const [profile] = useLocalStore<Profile>(STORE_KEYS.profile, seedProfile)
+  const [tasks] = useLocalStore<Task[]>(STORE_KEYS.tasks, seedTasks)
+  const [events] = useLocalStore<EventItem[]>(STORE_KEYS.events, seedEvents)
+  const [notes] = useLocalStore<Note[]>(STORE_KEYS.notes, seedNotes)
+  const [files] = useLocalStore<FileDoc[]>(STORE_KEYS.files, seedFiles)
+  const [alerts, setAlerts] = useLocalStore<Alert[]>(STORE_KEYS.alerts, seedAlerts)
+
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
+  const [highlight, setHighlight] = useState(0)
+  const [alertsOpen, setAlertsOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+  const alertsRef = useRef<HTMLDivElement>(null)
 
-  const matches = useMemo(() => {
+  const unread = alerts.filter(alert => !alert.read).length
+
+  const hits = useMemo<SearchHit[]>(() => {
     const term = query.trim().toLowerCase()
     if (!term) return []
-    return NAV_ITEMS.filter(item => item.label.toLowerCase().includes(term)).slice(0, 5)
-  }, [query])
+    const pageHits: SearchHit[] = NAV_ITEMS.filter(item => item.label.toLowerCase().includes(term))
+      .slice(0, 4)
+      .map(item => ({ id: `page-${item.to}`, title: item.label, subtitle: 'Page', to: item.to, group: 'Pages' }))
+    return [...pageHits, ...searchRecords(term, { tasks, events, notes, files })]
+  }, [query, tasks, events, notes, files])
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false)
+    setQuery('')
+  }, [])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
+        setAlertsOpen(false)
         setSearchOpen(true)
         searchRef.current?.focus()
       }
-      if (event.key === 'Escape') setSearchOpen(false)
+      if (event.key === 'Escape') {
+        closeSearch()
+        setAlertsOpen(false)
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
+  }, [closeSearch])
+
+  useEffect(() => {
+    function onPointerDown(event: MouseEvent) {
+      if (alertsRef.current && !alertsRef.current.contains(event.target as Node)) {
+        setAlertsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
   }, [])
 
   function goTo(path: string) {
     navigate(path)
-    setQuery('')
-    setSearchOpen(false)
+    closeSearch()
     searchRef.current?.blur()
+  }
+
+  function openAlert(alert: Alert) {
+    setAlerts(current => current.map(item => (item.id === alert.id ? { ...item, read: true } : item)))
+    setAlertsOpen(false)
+    navigate(ALERT_ROUTES[alert.kind])
+  }
+
+  function markAllRead() {
+    setAlerts(current => current.map(alert => ({ ...alert, read: true })))
   }
 
   const initials = profile.name
@@ -83,6 +130,8 @@ export function AppShell() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">Skip to content</a>
+
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark"><Command size={18} /></span>
@@ -129,48 +178,111 @@ export function AppShell() {
         </div>
       </aside>
 
-      <main className="main">
+      <main className="main" id="main-content" tabIndex={-1}>
         <header className="topbar">
           <div className="search-wrap">
             <div className="search">
               <Search size={18} aria-hidden="true" />
               <input
                 ref={searchRef}
-                aria-label="Search pages"
-                placeholder="Search anything..."
+                aria-label="Search pages and records"
+                aria-expanded={searchOpen && Boolean(query)}
+                aria-controls="search-results"
+                role="combobox"
+                aria-autocomplete="list"
+                placeholder="Search tasks, notes, files..."
                 value={query}
                 onChange={event => {
                   setQuery(event.target.value)
+                  setHighlight(0)
                   setSearchOpen(true)
                 }}
                 onFocus={() => setSearchOpen(true)}
                 onKeyDown={event => {
-                  if (event.key === 'Enter' && matches[0]) goTo(matches[0].to)
+                  if (event.key === 'ArrowDown') {
+                    event.preventDefault()
+                    setHighlight(current => Math.min(current + 1, hits.length - 1))
+                  }
+                  if (event.key === 'ArrowUp') {
+                    event.preventDefault()
+                    setHighlight(current => Math.max(current - 1, 0))
+                  }
+                  if (event.key === 'Enter') {
+                    const target = hits[highlight] ?? hits[0]
+                    if (target) goTo(target.to)
+                  }
                 }}
               />
               <kbd>⌘ K</kbd>
             </div>
             {searchOpen && query ? (
-              <div className="search-results" role="listbox" aria-label="Search results">
-                {matches.length ? (
-                  matches.map(item => (
-                    <button key={item.to} type="button" role="option" aria-selected="false" onClick={() => goTo(item.to)}>
-                      <item.icon size={16} aria-hidden="true" />
-                      {item.label}
+              <div className="search-results" id="search-results" role="listbox" aria-label="Search results">
+                {hits.length ? (
+                  hits.map((hit, index) => (
+                    <button
+                      key={hit.id}
+                      type="button"
+                      role="option"
+                      aria-selected={index === highlight}
+                      tabIndex={-1}
+                      className={`search-hit ${index === highlight ? 'active' : ''}`}
+                      onMouseEnter={() => setHighlight(index)}
+                      onClick={() => goTo(hit.to)}
+                    >
+                      <span className="search-group">{hit.group}</span>
+                      <span className="search-hit-copy">
+                        <strong>{hit.title}</strong>
+                        <small>{hit.subtitle}</small>
+                      </span>
                     </button>
                   ))
                 ) : (
-                  <p>No pages match “{query}”.</p>
+                  <p>Nothing matches “{query}”. Try a task, note or file name.</p>
                 )}
               </div>
             ) : null}
           </div>
 
           <div className="topbar-actions">
-            <button className="icon-btn" type="button" aria-label="Notifications, 3 unread">
-              <Bell size={19} />
-              <span className="badge-count">3</span>
-            </button>
+            <div className="alerts-wrap" ref={alertsRef}>
+              <button
+                className="icon-btn"
+                type="button"
+                aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
+                aria-expanded={alertsOpen}
+                aria-controls="alerts-panel"
+                onClick={() => setAlertsOpen(open => !open)}
+              >
+                <Bell size={19} />
+                {unread ? <span className="badge-count">{unread}</span> : null}
+              </button>
+              {alertsOpen ? (
+                <div className="alerts-panel" id="alerts-panel">
+                  <div className="alerts-head">
+                    <strong>Notifications</strong>
+                    <button type="button" onClick={markAllRead} disabled={unread === 0}>Mark all read</button>
+                  </div>
+                  <div className="alerts-list">
+                    {alerts.slice(0, 4).map(alert => (
+                      <button
+                        key={alert.id}
+                        type="button"
+                        className={`alert-row ${alert.read ? 'read' : 'unread'}`}
+                        onClick={() => openAlert(alert)}
+                      >
+                        <i className={`alert-dot ${alert.kind}`} />
+                        <span>
+                          <strong>{alert.title}</strong>
+                          <small>{alert.detail} · {alert.time}</small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <Link to="/notifications" onClick={() => setAlertsOpen(false)}>View all notifications</Link>
+                </div>
+              ) : null}
+            </div>
+
             <div className="profile">
               <div className="avatar">{initials}</div>
               <div className="profile-copy">
@@ -181,7 +293,9 @@ export function AppShell() {
           </div>
         </header>
 
-        <Outlet />
+        <Suspense fallback={<PageFallback />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   )

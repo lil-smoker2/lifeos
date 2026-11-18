@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Check, Moon, RotateCcw, Sun } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
-import { useTheme } from '../features/theme/ThemeProvider'
+import { useTheme } from '../features/theme/theme-context'
 import { STORE_KEYS, seedProfile, type Profile } from '../lib/seed'
 import { useLocalStore } from '../lib/useLocalStore'
 

@@ -12,7 +12,7 @@ export function DonutRing({ percent, color = 'var(--green)', label, size = 116 }
 
   return (
     <div className="donut">
-      <div className="donut-visual" style={{ width: size, height: size }}>
+      <div className="donut-visual" style={{ width: size, height: size }} role="img" aria-label={`${percent}% complete`}>
         <svg viewBox="0 0 100 100" aria-hidden="true">
           <circle cx="50" cy="50" r={radius} fill="transparent" stroke="var(--surface-2)" strokeWidth="10" />
           <circle

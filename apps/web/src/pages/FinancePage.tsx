@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { ArrowDownLeft, ArrowUpRight, PiggyBank, Plus, Trash2, Wallet } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
-import { useTheme } from '../features/theme/ThemeProvider'
+import { useTheme } from '../features/theme/theme-context'
 import { STORE_KEYS, balanceOf, money, seedTxns, type Txn, type TxnType } from '../lib/seed'
 import { useLocalStore, uid } from '../lib/useLocalStore'
 

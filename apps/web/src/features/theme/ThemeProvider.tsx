@@ -1,15 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ThemeContext, type Theme } from './theme-context'
 
-export type Theme = 'light' | 'dark'
-
-type ThemeContextValue = {
-  theme: Theme
-  isDark: boolean
-  setTheme: (theme: Theme) => void
-  toggleTheme: () => void
-}
-
-const ThemeContext = createContext<ThemeContextValue | null>(null)
 const STORAGE_KEY = 'lifeos.theme'
 
 function readInitialTheme(): Theme {
@@ -26,7 +17,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, theme)
   }, [theme])
 
-  const value = useMemo<ThemeContextValue>(
+  const value = useMemo(
     () => ({
       theme,
       isDark: theme === 'dark',
@@ -37,10 +28,4 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   )
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-}
-
-export function useTheme() {
-  const context = useContext(ThemeContext)
-  if (!context) throw new Error('useTheme must be used inside ThemeProvider')
-  return context
 }

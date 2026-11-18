@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Bot, Send, Sparkles } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
@@ -31,7 +31,7 @@ export function AiPage() {
   const [draft, setDraft] = useState('')
   const started = useRef(false)
 
-  function answer(question: string) {
+  const answer = useCallback((question: string) => {
     const text = question.toLowerCase()
     const open = tasks.filter(task => !task.done)
 
@@ -57,9 +57,9 @@ export function AiPage() {
       return `Your knowledge base holds ${notes.length} notes, ${notes.filter(note => !note.reviewed).length} awaiting review.`
     }
     return `Here is your snapshot: ${open.length} open tasks, ${learningPercent(courses)}% learning progress, balance ${money(balanceOf(txns), false)}, and ${notes.length} notes saved.`
-  }
+  }, [tasks, courses, goals, txns, health, notes])
 
-  function send(question: string) {
+  const send = useCallback((question: string) => {
     const clean = question.trim()
     if (!clean) return
     setMessages(current => [
@@ -68,14 +68,14 @@ export function AiPage() {
       { id: uid(), role: 'assistant', text: answer(clean) },
     ])
     setDraft('')
-  }
+  }, [answer])
 
   useEffect(() => {
     if (initialPrompt && !started.current) {
       started.current = true
       send(initialPrompt)
     }
-  }, [initialPrompt])
+  }, [initialPrompt, send])
 
   function submit(event: FormEvent) {
     event.preventDefault()

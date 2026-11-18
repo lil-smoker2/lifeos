@@ -6,7 +6,7 @@ import {
   Heart, Laptop, MoreHorizontal, Plus, Send, Target, Trophy, WalletCards,
 } from 'lucide-react'
 import { DonutRing } from '../components/DonutRing'
-import { useTheme } from '../features/theme/ThemeProvider'
+import { useTheme } from '../features/theme/theme-context'
 import {
   STORE_KEYS, balanceOf, goalPercent, learningPercent, money, seedActivity,
   seedCourses, seedEvents, seedGoals, seedHealth, seedProfile, seedReminders,

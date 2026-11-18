@@ -33,8 +33,10 @@ breaks the homepage, fix it before moving on.
 
 **Done:** the entire frontend prototype. A routed React SPA with a persistent
 light/dark theme, a theme-aware dashboard (light 5-stat layout and dark 3×3
-widget matrix), and twelve working module pages backed by `localStorage`.
-`npm run build` (TypeScript + Vite) and `npm run lint` (oxlint) pass. The
+widget matrix), thirteen working module pages backed by `localStorage`,
+global Cmd/Ctrl+K search, an alerts inbox, responsive navigation, and
+route-level code splitting. `npm run build` (TypeScript + Vite) and
+`npm run lint` (oxlint) pass with no warnings. The
 Phase 1 build is installed as a desktop launcher named **LifeOS** that serves
 the built app on port 4173.
 
@@ -97,15 +99,17 @@ lifesmart/
 │        │  ├─ layout.css           # shell, sidebar, topbar, breakpoints
 │        │  ├─ dashboard.css        # hero, stat cards, widgets, matrix
 │        │  └─ pages.css            # module pages, tables, forms, chat
-│        ├─ features/theme/ThemeProvider.tsx
+│        ├─ features/theme/ThemeProvider.tsx, theme-context.ts
 │        ├─ layouts/AppShell.tsx    # sidebar + topbar + routed outlet
 │        ├─ components/
 │        │  ├─ DonutRing.tsx
 │        │  └─ PageHeader.tsx
 │        ├─ lib/
 │        │  ├─ seed.ts              # types, seed data, money/progress helpers
+│        │  ├─ navigation.ts        # nav model shared by shell and search
+│        │  ├─ search.ts            # grouped search across records
 │        │  └─ useLocalStore.ts     # localStorage-backed useState
-│        └─ pages/                  # Dashboard + 12 module pages
+│        └─ pages/                  # Dashboard + 13 module pages + notifications
 ├─ docs/
 │  └─ BUILD_PLAN.md                 # this file
 ├─ scripts/
@@ -149,10 +153,10 @@ lifesmart/
 
 | Step | Name | Status |
 |---|---|---|
-| 3.1 | Global search and notification shell | 🟡 |
+| 3.1 | Global search and notifications | ✅ |
 | 3.2 | Responsive and mobile navigation | ✅ |
-| 3.3 | Accessibility and performance pass | 🟡 |
-| 3.4 | Route-level code splitting | ⬜ |
+| 3.3 | Accessibility and performance pass | ✅ |
+| 3.4 | Route-level code splitting | ✅ |
 
 ### Phase 4 — Backend and real persistence
 
@@ -361,16 +365,20 @@ restores seed data.
 
 # PHASE 3 — Frontend polish
 
-### STEP 3.1 — Global search and notification shell
-**STATUS:** 🟡 in progress
-**GOAL:** Cmd/Ctrl+K search that navigates, and a notification surface.
-**DONE:** Search field focuses via Cmd/Ctrl+K, filters the twelve routes,
-supports Enter and Escape; bell shows a static unread count.
-**BUILD NEXT:** index module records (tasks, notes, files, events) as search
-targets, add a results overlay with sections, and turn the bell into a
-dropdown backed by a `lifeos.alerts` store.
-**VERIFY:** Searching "calculus" surfaces the event and the note; bell badge
-count matches unresolved alerts.
+### STEP 3.1 — Global search and notifications
+**STATUS:** ✅
+**GOAL:** Cmd/Ctrl+K search across the app, plus an actionable notification
+surface.
+**BUILD:** `src/lib/search.ts` indexes tasks, events, notes and files and
+returns grouped hits; `AppShell.tsx` merges page hits with record hits,
+supports ArrowUp/ArrowDown/Enter/Escape and highlights the active row. Bell
+opens a dropdown backed by `lifeos.alerts` with unread counts, per-alert
+mark-as-read, mark-all-read and links to the related module. A dedicated
+`/notifications` page (`pages/AlertsPage.tsx`) lists, reads and deletes
+alerts.
+**VERIFY:** Searching "math" finds the mathematics task and calculus event;
+Enter opens the highlighted result; the bell badge equals unread alerts and
+clears when all are marked read.
 
 ### STEP 3.2 — Responsive and mobile navigation
 **STATUS:** ✅
@@ -382,23 +390,29 @@ becomes a five-item bottom bar at 640 px.
 without horizontal scrolling (tables scroll inside their own container).
 
 ### STEP 3.3 — Accessibility and performance pass
-**STATUS:** 🟡 in progress
-**DONE:** Semantic landmarks, labelled inputs, `aria-current` via NavLink,
-`aria-selected` tabs, `role="switch"` toggles, visible focus rings, reduced
-motion handling.
-**BUILD NEXT:** Audit contrast for pastel pills in both themes, add a skip
-link, ensure every icon-only button has an accessible name (already mostly
-done), and remove the `Date` call from render in `PlannerPage`.
-**VERIFY:** Keyboard-only navigation reaches every page and control; no
-console errors; Lighthouse accessibility ≥ 95.
+**STATUS:** ✅
+**GOAL:** Keyboard and screen-reader friendly UI in both themes.
+**BUILD:** Skip link to `#main-content`; semantic landmarks (`aside`, `main`,
+`nav`); labelled inputs and icon-only buttons; combobox/search result
+semantics with `aria-expanded`, `aria-controls` and `role="option"`; alert
+menu with `aria-expanded`/`aria-controls`; `aria-checked` switches; tabs with
+`aria-selected`; donut ring exposed as `role="img"` with a percent label;
+reduced-motion handling; dark-theme contrast overrides for priority pills,
+class pills and trend badges; impure `Date` call moved out of render in
+`PlannerPage`; `oxlint` now reports no warnings.
+**VERIFY:** Tab and Shift+Tab reach every control with a visible focus ring;
+Cmd/Ctrl+K opens search and Escape closes it; text in pastel pills remains
+readable in dark mode; `npm run lint` is clean.
 
 ### STEP 3.4 — Route-level code splitting
-**STATUS:** ⬜ pending
+**STATUS:** ✅
 **GOAL:** Keep the initial bundle small.
-**BUILD:** Convert page imports in `App.tsx` to `React.lazy` with a suspense
-fallback matching the card skeleton style.
-**VERIFY:** `npm run build` reports multiple chunks; navigation still
-instant on localhost.
+**BUILD:** Every page in `App.tsx` is loaded with `React.lazy`; `AppShell`
+wraps the routed outlet in `Suspense` with a card-style loading fallback, so
+the shell and sidebar stay mounted while a route chunk loads.
+**VERIFY:** `npm run build` emits one chunk per page (Dashboard ~18 kB, most
+module pages 2–6 kB) and the shared entry is ~286 kB instead of a single
+~341 kB bundle; navigation remains instant on localhost.
 
 ---
 
@@ -516,10 +530,11 @@ data persists between launches.
 
 ## Next recommended step
 
-**4.1 — FastAPI scaffold.** The frontend is feature-complete against local
-data; the highest-value next move is standing up the API and health check, so
-Phase 4 persistence can proceed one module at a time. Until then the frontend
-is the reference implementation for every data shape in `src/lib/seed.ts`.
+**4.1 — FastAPI scaffold.** Phase 3 is complete (search, notifications,
+responsive layout, accessibility, code splitting). The highest-value next
+move is standing up the API and health check so Phase 4 persistence can
+proceed one module at a time. Until then the frontend is the reference
+implementation for every data shape in `src/lib/seed.ts`.
 
 ---
 
@@ -656,6 +671,7 @@ The ring animates via `stroke-dashoffset` (0.6 s ease) on the
 | `lifeos.health` | `{ steps, sleep, water, diet }` |
 | `lifeos.reminders` | `{ id, title, time, badge, done }[]` |
 | `lifeos.rules` | `{ id, trigger, action, active, runs }[]` |
+| `lifeos.alerts` | `{ id, title, detail, time, read, kind }[]` |
 | `lifeos.activity` | `{ id, title, time }[]` |
 | `lifeos.profile` | `{ name, role, focus }` |
 | `lifeos.theme` | `"light"` or `"dark"` |

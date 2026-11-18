@@ -8,11 +8,12 @@ const YEAR = 2026
 const MONTH = 10
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const TONES: EventItem['tone'][] = ['blue', 'violet', 'orange', 'green']
+const TODAY = new Date()
+const TODAY_IN_VIEW = TODAY.getFullYear() === YEAR && TODAY.getMonth() === MONTH
 
 export function PlannerPage() {
   const [events, setEvents] = useLocalStore<EventItem[]>(STORE_KEYS.events, seedEvents)
-  const today = new Date()
-  const initialDay = today.getFullYear() === YEAR && today.getMonth() === MONTH ? today.getDate() : 18
+  const initialDay = TODAY_IN_VIEW ? TODAY.getDate() : 18
   const [selectedDay, setSelectedDay] = useState(initialDay)
   const [title, setTitle] = useState('')
   const [place, setPlace] = useState('')

@@ -83,6 +83,15 @@ export type Rule = {
   runs: number
 }
 
+export type Alert = {
+  id: string
+  title: string
+  detail: string
+  time: string
+  read: boolean
+  kind: 'task' | 'finance' | 'note' | 'system'
+}
+
 export type Profile = {
   name: string
   role: string
@@ -107,6 +116,7 @@ export const STORE_KEYS = {
   reminders: 'lifeos.reminders',
   activity: 'lifeos.activity',
   rules: 'lifeos.rules',
+  alerts: 'lifeos.alerts',
   profile: 'lifeos.profile',
   health: 'lifeos.health',
 } as const
@@ -186,6 +196,13 @@ export const seedRules: Rule[] = [
 ]
 
 export const seedProfile: Profile = { name: 'Brian Acon', role: 'Student • Life Manager', focus: 'Plan my study schedule for this week' }
+
+export const seedAlerts: Alert[] = [
+  { id: 'al1', title: '3 tasks are due before 18:00', detail: 'Mathematics exercises and 2 more', time: '12 min ago', read: false, kind: 'task' },
+  { id: 'al2', title: 'Internet bill due Nov 20', detail: 'Budgeted at $45 from Finance', time: '2h ago', read: false, kind: 'finance' },
+  { id: 'al3', title: '5 notes awaiting review', detail: 'Including Renaissance art timeline', time: 'Yesterday', read: false, kind: 'note' },
+  { id: 'al4', title: 'Automation rule paused', detail: '“Study session ended” is inactive', time: 'Yesterday', read: true, kind: 'system' },
+]
 
 export const seedHealth: HealthLog = { steps: 7500, sleep: 7.2, water: 1.8, diet: true }
 
