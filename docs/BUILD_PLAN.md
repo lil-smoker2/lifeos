@@ -42,10 +42,11 @@ the built app on port 4173.
 
 **Backend started:** Phase 4.1 adds a FastAPI scaffold with `/api/health`,
 CORS for the dev and installed app origins, a Vite `/api` proxy and a combined
-`scripts/dev.sh` runner.
+`scripts/dev.sh` runner. Phase 4.2 adds SQLAlchemy models for all thirteen
+entities plus a baseline Alembic migration.
 
-**Not started:** the database, auth, real persistence, PWA / desktop
-packaging, and the automation engine beyond frontend simulation.
+**Not started:** auth, real persistence, PWA / desktop packaging, and the
+automation engine beyond frontend simulation.
 
 This means the app currently behaves like a polished offline demo: everything
 is editable and survives refresh (per browser), but nothing syncs between
@@ -69,6 +70,8 @@ source .venv/bin/activate
 pip install -r requirements.txt   # first run only
 uvicorn app.main:app --reload --port 8000
 # docs: http://localhost:8000/docs · health: /api/health
+alembic upgrade head              # apply migrations
+alembic revision --autogenerate -m "change"   # after model edits
 ```
 
 Run both servers together:
@@ -134,10 +137,15 @@ lifesmart/
 │  └─ api/                          # FastAPI backend (Phase 4)
 │     ├─ requirements.txt
 │     ├─ .venv/                     # local only, git-ignored
+│     ├─ alembic.ini
+│     ├─ alembic/                   # env.py + baseline migration
 │     └─ app/
 │        ├─ main.py                 # app factory, CORS, routers
+│        ├─ models.py               # SQLAlchemy models for every module
 │        ├─ api/health.py           # GET /api/health
-│        └─ core/config.py          # pydantic-settings configuration
+│        └─ core/
+│           ├─ config.py            # pydantic-settings configuration
+│           └─ database.py          # engine, session factory, Base, get_db
 ├─ docs/
 │  └─ BUILD_PLAN.md                 # this file
 ├─ scripts/
@@ -192,7 +200,7 @@ lifesmart/
 | Step | Name | Status |
 |---|---|---|
 | 4.1 | FastAPI scaffold and health check | ✅ |
-| 4.2 | Database, models and migrations | ⬜ |
+| 4.2 | Database, models and migrations | ✅ |
 | 4.3 | Auth (register, login, JWT) | ⬜ |
 | 4.4 | API client and auth-aware frontend | ⬜ |
 | 4.5 | Persist tasks and events | ⬜ |
@@ -460,12 +468,17 @@ URL), `app/api/health.py` (`GET /api/health`), `requirements.txt`, a Vite
 loads on 4173/5173.
 
 ### STEP 4.2 — Database, models and migrations
-**STATUS:** ⬜ pending
+**STATUS:** ✅
 **GOAL:** One table per module, matching the frontend shapes.
-**BUILD:** SQLAlchemy base, SQLite engine, Alembic, models for `users`,
-`tasks`, `events`, `transactions` (amounts in minor units), `courses`, `goals`,
-`health_logs`, `notes`, `documents`, `automation_rules`, `activity`.
-**VERIFY:** `alembic upgrade head` creates `app.db`; `/api/health` still ok.
+**BUILD:** `app/core/database.py` (SQLite engine, session factory, `Base`,
+`get_db`), `app/models.py` with thirteen tables: `users`, `tasks`, `events`,
+`transactions` (amounts in minor units), `courses`, `goals`, `health_logs`,
+`notes`, `documents`, `automation_rules`, `activities`, `alerts` and
+`reminders`. Alembic is initialised (`alembic.ini`, `alembic/env.py` wired to
+the settings URL and `Base.metadata`) with a baseline migration.
+**VERIFY:** `alembic upgrade head` creates `app.db` with all tables plus
+`alembic_version` at the baseline revision; `/api/health` still returns ok and
+the homepage still loads.
 
 ### STEP 4.3 — Auth (register, login, JWT)
 **STATUS:** ⬜ pending
@@ -563,9 +576,9 @@ data persists between launches.
 
 ## Next recommended step
 
-**4.2 — Database, models and migrations.** Phase 4.1 is running. Next, add
-SQLAlchemy models mirroring `src/lib/seed.ts` plus Alembic so each module can
-be moved from `localStorage` to the API one slice at a time.
+**4.3 — Auth (register, login, JWT).** The schema and migrations are in
+place. Next, add password hashing and JWT endpoints so ownership (`user_id`)
+can be enforced before module data is moved off `localStorage`.
 
 ---
 
