@@ -24,6 +24,8 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(120), default="")
     role: Mapped[str] = mapped_column(String(120), default="Student")
     hashed_password: Mapped[str] = mapped_column(String(255), default="")
+    seeded: Mapped[bool] = mapped_column(Boolean, default=False)
+    seed_version: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 

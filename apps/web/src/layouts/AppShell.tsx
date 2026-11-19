@@ -2,13 +2,15 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Bell, Command, LogOut, Moon, Search, Star, Sun } from 'lucide-react'
 import { useAuth } from '../features/auth/auth-context'
+import { useEvents } from '../features/events/useEvents'
+import { useTasks } from '../features/tasks/useTasks'
 import { useTheme } from '../features/theme/theme-context'
 import { NAV_ITEMS } from '../lib/navigation'
 import { searchRecords, type SearchHit } from '../lib/search'
+import { clockTime, dayOf } from '../lib/dates'
 import {
-  STORE_KEYS, seedAlerts, seedEvents, seedFiles, seedNotes, seedProfile,
-  seedTasks, type Alert, type EventItem, type FileDoc, type Note, type Profile,
-  type Task,
+  STORE_KEYS, seedAlerts, seedFiles, seedNotes, seedProfile,
+  type Alert, type FileDoc, type Note, type Profile,
 } from '../lib/seed'
 import { useLocalStore } from '../lib/useLocalStore'
 
@@ -51,8 +53,8 @@ export function AppShell() {
   const { logout } = useAuth()
   const navigate = useNavigate()
   const [profile] = useLocalStore<Profile>(STORE_KEYS.profile, seedProfile)
-  const [tasks] = useLocalStore<Task[]>(STORE_KEYS.tasks, seedTasks)
-  const [events] = useLocalStore<EventItem[]>(STORE_KEYS.events, seedEvents)
+  const { tasks } = useTasks()
+  const { events } = useEvents()
   const [notes] = useLocalStore<Note[]>(STORE_KEYS.notes, seedNotes)
   const [files] = useLocalStore<FileDoc[]>(STORE_KEYS.files, seedFiles)
   const [alerts, setAlerts] = useLocalStore<Alert[]>(STORE_KEYS.alerts, seedAlerts)
@@ -72,7 +74,14 @@ export function AppShell() {
     const pageHits: SearchHit[] = NAV_ITEMS.filter(item => item.label.toLowerCase().includes(term))
       .slice(0, 4)
       .map(item => ({ id: `page-${item.to}`, title: item.label, subtitle: 'Page', to: item.to, group: 'Pages' }))
-    return [...pageHits, ...searchRecords(term, { tasks, events, notes, files })]
+    const searchEvents = events.map(event => ({
+      id: event.id,
+      title: event.title,
+      place: event.place,
+      day: dayOf(event.starts_at),
+      start: clockTime(event.starts_at),
+    }))
+    return [...pageHits, ...searchRecords(term, { tasks, events: searchEvents, notes, files })]
   }, [query, tasks, events, notes, files])
 
   const closeSearch = useCallback(() => {

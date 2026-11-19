@@ -6,12 +6,15 @@ import {
   Heart, Laptop, MoreHorizontal, Plus, Send, Target, Trophy, WalletCards,
 } from 'lucide-react'
 import { DonutRing } from '../components/DonutRing'
+import { useEvents } from '../features/events/useEvents'
+import { useTasks } from '../features/tasks/useTasks'
 import { useTheme } from '../features/theme/theme-context'
+import { clockTime, dayOf } from '../lib/dates'
 import {
   STORE_KEYS, balanceOf, goalPercent, learningPercent, money, seedActivity,
-  seedCourses, seedEvents, seedGoals, seedHealth, seedProfile, seedReminders,
-  seedTasks, seedTxns, type Activity, type Course, type EventItem, type Goal,
-  type HealthLog, type Profile, type Reminder, type Task, type Txn,
+  seedCourses, seedGoals, seedHealth, seedProfile, seedReminders,
+  seedTxns, type Activity, type Course, type Goal,
+  type HealthLog, type Profile, type Reminder, type Txn,
 } from '../lib/seed'
 import { useLocalStore } from '../lib/useLocalStore'
 
@@ -46,8 +49,8 @@ function Sparkline() {
 export function Dashboard() {
   const { isDark } = useTheme()
   const navigate = useNavigate()
-  const [tasks, setTasks] = useLocalStore<Task[]>(STORE_KEYS.tasks, seedTasks)
-  const [events] = useLocalStore<EventItem[]>(STORE_KEYS.events, seedEvents)
+  const { tasks, update: updateTask } = useTasks()
+  const { events } = useEvents()
   const [txns] = useLocalStore<Txn[]>(STORE_KEYS.txns, seedTxns)
   const [courses] = useLocalStore<Course[]>(STORE_KEYS.courses, seedCourses)
   const [goals] = useLocalStore<Goal[]>(STORE_KEYS.goals, seedGoals)
@@ -64,7 +67,12 @@ export function Dashboard() {
   }, [])
 
   const openTasks = tasks.filter(task => !task.done)
-  const todayEvents = events.filter(event => event.day === new Date().getDate())
+  const todayEvents = events.filter(event => dayOf(event.starts_at) === now.getDate())
+  const todayLabel = {
+    day: now.getDate(),
+    month: now.toLocaleDateString('en-US', { month: 'short' }),
+    weekday: now.toLocaleDateString('en-US', { weekday: 'short' }),
+  }
   const balance = balanceOf(txns)
   const learning = learningPercent(courses)
   const goalsAverage = Math.round(goals.reduce((sum, goal) => sum + goalPercent(goal), 0) / Math.max(goals.length, 1))
@@ -75,7 +83,9 @@ export function Dashboard() {
   const dateLine = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   function toggleTask(id: string) {
-    setTasks(current => current.map(task => (task.id === id ? { ...task, done: !task.done } : task)))
+    const task = tasks.find(item => item.id === id)
+    if (!task) return
+    updateTask.mutate({ id, changes: { done: !task.done } })
   }
 
   function askAssistant(event: FormEvent) {
@@ -132,11 +142,11 @@ export function Dashboard() {
             <article className="card schedule-card">
               <header className="card-head"><h2>Calendar &amp; schedule</h2><Link to="/planner">Open</Link></header>
               <div className="schedule-body">
-                <div className="date-chip"><strong>18</strong><span>Nov</span><small>Wed</small></div>
+                <div className="date-chip"><strong>{todayLabel.day}</strong><span>{todayLabel.month}</span><small>{todayLabel.weekday}</small></div>
                 <div className="timeline">
                   {todayEvents.slice(0, 3).map(event => (
                     <div className="timeline-row" key={event.id}>
-                      <time>{event.start}</time>
+                      <time>{clockTime(event.starts_at)}</time>
                       <i className={`dot ${event.tone}`} />
                       <div><strong>{event.title}</strong><span>{event.place}</span></div>
                     </div>
@@ -276,7 +286,7 @@ export function Dashboard() {
               <span className="glass-badge"><CalendarDays size={20} /></span>
               <strong>{todayEvents.length}</strong>
               <span>Events</span>
-              <small>{todayEvents[0] ? `Next at ${todayEvents[0].start}` : 'Nothing scheduled'}</small>
+              <small>{todayEvents[0] ? `Next at ${clockTime(todayEvents[0].starts_at)}` : 'Nothing scheduled'}</small>
             </article>
             <article className="stat-card grad-orange">
               <span className="glass-badge"><CircleDollarSign size={20} /></span>
@@ -330,7 +340,7 @@ export function Dashboard() {
                 {todayEvents.map(event => (
                   <div className="event" key={event.id}>
                     <span className={`event-icon ${event.tone}`}><CalendarDays size={17} /></span>
-                    <div><strong>{event.title}</strong><span>{event.start} · {event.place}</span></div>
+                    <div><strong>{event.title}</strong><span>{clockTime(event.starts_at)} · {event.place}</span></div>
                     <ChevronRight size={16} className="chev" aria-hidden="true" />
                   </div>
                 ))}

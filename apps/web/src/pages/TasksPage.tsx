@@ -1,15 +1,15 @@
 import { useState, type FormEvent } from 'react'
 import { CheckCircle2, Clock3, Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
-import { STORE_KEYS, seedTasks, type Priority, type Task } from '../lib/seed'
-import { useLocalStore, uid } from '../lib/useLocalStore'
+import { useTasks } from '../features/tasks/useTasks'
+import type { Priority } from '../lib/seed'
 
 type Filter = 'all' | 'open' | 'done'
 
 const priorities: Priority[] = ['High', 'Medium', 'Low']
 
 export function TasksPage() {
-  const [tasks, setTasks] = useLocalStore<Task[]>(STORE_KEYS.tasks, seedTasks)
+  const { tasks, isLoading, error, create, update, remove } = useTasks()
   const [filter, setFilter] = useState<Filter>('all')
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('Study')
@@ -22,20 +22,12 @@ export function TasksPage() {
     return true
   })
 
-  function addTask(event: FormEvent) {
+  async function addTask(event: FormEvent) {
     event.preventDefault()
     const cleanTitle = title.trim()
     if (!cleanTitle) return
-    setTasks(current => [{ id: uid(), title: cleanTitle, category, priority, due, done: false }, ...current])
+    await create.mutateAsync({ title: cleanTitle, category, priority, due })
     setTitle('')
-  }
-
-  function toggleTask(id: string) {
-    setTasks(current => current.map(task => (task.id === id ? { ...task, done: !task.done } : task)))
-  }
-
-  function removeTask(id: string) {
-    setTasks(current => current.filter(task => task.id !== id))
   }
 
   const openCount = tasks.filter(task => !task.done).length
@@ -47,7 +39,7 @@ export function TasksPage() {
       <PageHeader
         eyebrow="Tasks"
         title="Everything on your plate"
-        description="Capture work, study and personal tasks. Completed items sync back to the dashboard."
+        description="Capture work, study and personal tasks. Saved to your LifeOS account."
       >
         <div className="kpi-row">
           <span className="kpi"><strong>{openCount}</strong> open</span>
@@ -66,7 +58,9 @@ export function TasksPage() {
             {priorities.map(option => <option key={option}>{option}</option>)}
           </select>
           <input type="time" value={due} onChange={event => setDue(event.target.value)} aria-label="Due time" />
-          <button className="btn btn-primary" type="submit"><Plus size={16} /> Add task</button>
+          <button className="btn btn-primary" type="submit" disabled={create.isPending}>
+            <Plus size={16} /> {create.isPending ? 'Adding...' : 'Add task'}
+          </button>
         </form>
 
         <div className="tabs" role="tablist" aria-label="Task filters">
@@ -84,6 +78,9 @@ export function TasksPage() {
           ))}
         </div>
 
+        {isLoading ? <p className="empty">Loading tasks from the API...</p> : null}
+        {error ? <p className="form-error" role="alert">Could not load tasks. Is the LifeOS API running on port 8000?</p> : null}
+
         <ul className="task-page-list">
           {visible.map(task => (
             <li className={`task-page-row ${task.done ? 'done' : ''}`} key={task.id}>
@@ -91,7 +88,7 @@ export function TasksPage() {
                 className={`check ${task.done ? 'checked' : ''}`}
                 type="button"
                 aria-label={task.done ? `Reopen ${task.title}` : `Complete ${task.title}`}
-                onClick={() => toggleTask(task.id)}
+                onClick={() => update.mutate({ id: task.id, changes: { done: !task.done } })}
               />
               <div className="task-page-copy">
                 <strong>{task.title}</strong>
@@ -101,13 +98,13 @@ export function TasksPage() {
                   <span className="task-time"><Clock3 size={13} /> {task.due}</span>
                 </div>
               </div>
-              <button className="icon-ghost" type="button" aria-label={`Delete ${task.title}`} onClick={() => removeTask(task.id)}>
+              <button className="icon-ghost" type="button" aria-label={`Delete ${task.title}`} onClick={() => remove.mutate(task.id)}>
                 <Trash2 size={16} />
               </button>
             </li>
           ))}
         </ul>
-        {visible.length === 0 ? (
+        {!isLoading && visible.length === 0 ? (
           <p className="empty"><CheckCircle2 size={18} /> Nothing here. Add a task or switch filters.</p>
         ) : null}
       </section>

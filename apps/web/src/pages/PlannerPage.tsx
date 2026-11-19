@@ -1,24 +1,24 @@
 import { useState, type FormEvent } from 'react'
 import { CalendarDays, Clock3, Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
-import { STORE_KEYS, seedEvents, type EventItem } from '../lib/seed'
-import { useLocalStore, uid } from '../lib/useLocalStore'
+import { useEvents } from '../features/events/useEvents'
+import { clockTime, dayOf, localDateTime } from '../lib/dates'
 
 const YEAR = 2026
 const MONTH = 10
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const TONES: EventItem['tone'][] = ['blue', 'violet', 'orange', 'green']
+const TONES: Array<'blue' | 'violet' | 'orange' | 'green'> = ['blue', 'violet', 'orange', 'green']
 const TODAY = new Date()
 const TODAY_IN_VIEW = TODAY.getFullYear() === YEAR && TODAY.getMonth() === MONTH
 
 export function PlannerPage() {
-  const [events, setEvents] = useLocalStore<EventItem[]>(STORE_KEYS.events, seedEvents)
+  const { events, isLoading, error, create, remove } = useEvents()
   const initialDay = TODAY_IN_VIEW ? TODAY.getDate() : 18
   const [selectedDay, setSelectedDay] = useState(initialDay)
   const [title, setTitle] = useState('')
   const [place, setPlace] = useState('')
   const [start, setStart] = useState('09:00')
-  const [tone, setTone] = useState<EventItem['tone']>('blue')
+  const [tone, setTone] = useState<'blue' | 'violet' | 'orange' | 'green'>('blue')
 
   const firstWeekday = new Date(YEAR, MONTH, 1).getDay()
   const daysInMonth = new Date(YEAR, MONTH + 1, 0).getDate()
@@ -28,14 +28,24 @@ export function PlannerPage() {
   ]
   while (cells.length % 7 !== 0) cells.push(null)
 
-  const monthEvents = events.filter(event => event.day >= 1 && event.day <= daysInMonth)
-  const selectedEvents = monthEvents.filter(event => event.day === selectedDay).sort((a, b) => a.start.localeCompare(b.start))
+  const monthEvents = events.filter(event => {
+    const date = new Date(event.starts_at)
+    return date.getFullYear() === YEAR && date.getMonth() === MONTH
+  })
+  const selectedEvents = monthEvents
+    .filter(event => dayOf(event.starts_at) === selectedDay)
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
 
-  function addEvent(event: FormEvent) {
+  async function addEvent(event: FormEvent) {
     event.preventDefault()
     const cleanTitle = title.trim()
     if (!cleanTitle) return
-    setEvents(current => [...current, { id: uid(), title: cleanTitle, place: place.trim() || 'Campus', day: selectedDay, start, tone }])
+    await create.mutateAsync({
+      title: cleanTitle,
+      place: place.trim() || 'Campus',
+      starts_at: localDateTime(YEAR, MONTH, selectedDay, start),
+      tone,
+    })
     setTitle('')
     setPlace('')
   }
@@ -45,13 +55,15 @@ export function PlannerPage() {
       <PageHeader
         eyebrow="Planner"
         title="Calendar & schedule"
-        description="November 2026 — tap a day to review or add events. Today's timeline feeds the dashboard."
+        description="November 2026 — tap a day to review or add events. Stored on your LifeOS account."
       >
         <div className="kpi-row">
           <span className="kpi"><strong>{monthEvents.length}</strong> events in November</span>
           <span className="kpi"><strong>{selectedEvents.length}</strong> on Nov {selectedDay}</span>
         </div>
       </PageHeader>
+
+      {error ? <p className="form-error" role="alert">Could not load events. Is the LifeOS API running on port 8000?</p> : null}
 
       <div className="planner-grid">
         <section className="card calendar-card">
@@ -62,7 +74,7 @@ export function PlannerPage() {
           <div className="calendar-grid" role="grid" aria-label="November 2026 calendar">
             {cells.map((day, index) => {
               if (day === null) return <span key={`empty-${index}`} className="calendar-day empty" aria-hidden="true" />
-              const count = monthEvents.filter(event => event.day === day).length
+              const count = monthEvents.filter(event => dayOf(event.starts_at) === day).length
               return (
                 <button
                   key={day}
@@ -88,7 +100,7 @@ export function PlannerPage() {
           <div className="timeline">
             {selectedEvents.map(event => (
               <div className="timeline-row" key={event.id}>
-                <time>{event.start}</time>
+                <time>{clockTime(event.starts_at)}</time>
                 <i className={`dot ${event.tone}`} />
                 <div className="timeline-copy">
                   <strong>{event.title}</strong>
@@ -98,13 +110,14 @@ export function PlannerPage() {
                   className="icon-ghost"
                   type="button"
                   aria-label={`Delete ${event.title}`}
-                  onClick={() => setEvents(current => current.filter(item => item.id !== event.id))}
+                  onClick={() => remove.mutate(event.id)}
                 >
                   <Trash2 size={15} />
                 </button>
               </div>
             ))}
-            {selectedEvents.length === 0 ? <p className="empty"><Clock3 size={16} /> No events yet. Add one below.</p> : null}
+            {!isLoading && selectedEvents.length === 0 ? <p className="empty"><Clock3 size={16} /> No events yet. Add one below.</p> : null}
+            {isLoading ? <p className="empty">Loading events...</p> : null}
           </div>
 
           <form className="stack-form" onSubmit={addEvent}>
@@ -112,10 +125,12 @@ export function PlannerPage() {
             <input value={place} onChange={event => setPlace(event.target.value)} placeholder="Location" aria-label="Location" />
             <div className="form-row">
               <input type="time" value={start} onChange={event => setStart(event.target.value)} aria-label="Start time" />
-              <select value={tone} onChange={event => setTone(event.target.value as EventItem['tone'])} aria-label="Color">
+              <select value={tone} onChange={event => setTone(event.target.value as typeof tone)} aria-label="Color">
                 {TONES.map(option => <option key={option}>{option}</option>)}
               </select>
-              <button className="btn btn-primary" type="submit"><Plus size={16} /> Add event</button>
+              <button className="btn btn-primary" type="submit" disabled={create.isPending}>
+                <Plus size={16} /> {create.isPending ? 'Adding...' : 'Add event'}
+              </button>
             </div>
           </form>
         </section>

@@ -1,4 +1,7 @@
-import type { EventItem, FileDoc, Note, Task } from './seed'
+type SearchTask = { id: string; title: string; category: string; priority: string; due: string }
+type SearchEvent = { id: string; title: string; place: string; day: number; start: string }
+type SearchNote = { id: string; title: string; emoji: string; className: string; type: string }
+type SearchFile = { id: string; name: string; kind: string; size: string; tag: string }
 
 export type SearchGroup = 'Pages' | 'Tasks' | 'Events' | 'Notes' | 'Files'
 
@@ -11,10 +14,10 @@ export type SearchHit = {
 }
 
 export type SearchData = {
-  tasks: Task[]
-  events: EventItem[]
-  notes: Note[]
-  files: FileDoc[]
+  tasks: SearchTask[]
+  events: SearchEvent[]
+  notes: SearchNote[]
+  files: SearchFile[]
 }
 
 const LIMIT_PER_GROUP = 3

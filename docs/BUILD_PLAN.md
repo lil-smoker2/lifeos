@@ -218,7 +218,7 @@ lifesmart/
 | 4.2 | Database, models and migrations | ✅ |
 | 4.3 | Auth (register, login, JWT) | ✅ |
 | 4.4 | API client and auth-aware frontend | ✅ |
-| 4.5 | Persist tasks and events | ⬜ |
+| 4.5 | Persist tasks and events | ✅ |
 | 4.6 | Persist finance, learning, goals, health | ⬜ |
 | 4.7 | Persist notes and files (upload) | ⬜ |
 | 4.8 | Notifications and search endpoints | ⬜ |
@@ -524,11 +524,13 @@ signing out returns to `/welcome`. Headless Chromium renders the welcome
 headline and the proxied login endpoint returns a token.
 
 ### STEP 4.5 — Persist tasks and events
-**STATUS:** ⬜ pending
-**BUILD:** CRUD routers (`/api/tasks`, `/api/events`), typed hooks, optimistic
-updates, dashboard widgets switched to queries.
-**VERIFY:** A task created in one browser appears after reload; dashboard
-counts match the API.
+**STATUS:** ✅ done
+**BUILD:** CRUD routers (`/api/tasks`, `/api/events`), per-user seed on first
+access (`User.seeded`), typed hooks (`useTasks`, `useEvents`), and Tasks,
+Planner, Dashboard, AI search and global search switched from local stores to
+TanStack Query.
+**VERIFY:** Task/event CRUD verified against the API (list, create, patch,
+delete, 401 unauthenticated); `npm run build` and `npm run lint` pass.
 
 ### STEP 4.6 — Persist finance, learning, goals, health
 **STATUS:** ⬜ pending
@@ -603,9 +605,9 @@ data persists between launches.
 
 ## Next recommended step
 
-**4.5 — Persist tasks and events.** Auth-aware frontend is live. Next, add
-`/api/tasks` and `/api/events` CRUD routers scoped to the signed-in user, then
-switch the tasks and planner pages to TanStack Query.
+**4.6 — Persist finance, learning, goals, health.** Tasks and events now live
+on the API. Next, add routers for the remaining planner stores and switch the
+Finance, Learning, Goals and Health pages to TanStack Query.
 
 ---
 

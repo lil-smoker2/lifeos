@@ -4,9 +4,10 @@ import { Bot, Send, Sparkles } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
 import {
   STORE_KEYS, balanceOf, goalPercent, learningPercent, money, seedCourses,
-  seedGoals, seedHealth, seedNotes, seedTasks, seedTxns, type Course, type Goal,
-  type HealthLog, type Note, type Task, type Txn,
+  seedGoals, seedHealth, seedNotes, seedTxns, type Course, type Goal,
+  type HealthLog, type Note, type Txn,
 } from '../lib/seed'
+import { useTasks } from '../features/tasks/useTasks'
 import { useLocalStore, uid } from '../lib/useLocalStore'
 
 type Message = { id: string; role: 'user' | 'assistant'; text: string }
@@ -21,7 +22,7 @@ const suggestions = [
 export function AiPage() {
   const location = useLocation()
   const initialPrompt = (location.state as { prompt?: string } | null)?.prompt
-  const [tasks] = useLocalStore<Task[]>(STORE_KEYS.tasks, seedTasks)
+  const { tasks } = useTasks()
   const [courses] = useLocalStore<Course[]>(STORE_KEYS.courses, seedCourses)
   const [goals] = useLocalStore<Goal[]>(STORE_KEYS.goals, seedGoals)
   const [txns] = useLocalStore<Txn[]>(STORE_KEYS.txns, seedTxns)

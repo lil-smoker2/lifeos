@@ -74,4 +74,122 @@ export const api = {
       body: JSON.stringify({ name, email, password }),
     }),
   me: () => request<AuthUser>('/auth/me'),
+  tasks: {
+    list: () => request<ApiTask[]>('/tasks'),
+    create: (input: NewTask) =>
+      request<ApiTask>('/tasks', { method: 'POST', body: JSON.stringify(input) }),
+    update: (id: string, changes: Partial<NewTask & { done: boolean }>) =>
+      request<ApiTask>(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(changes) }),
+    remove: (id: string) => request<void>(`/tasks/${id}`, { method: 'DELETE' }),
+  },
+  events: {
+    list: () => request<ApiEvent[]>('/events'),
+    create: (input: NewEvent) =>
+      request<ApiEvent>('/events', { method: 'POST', body: JSON.stringify(input) }),
+    update: (id: string, changes: Partial<NewEvent>) =>
+      request<ApiEvent>(`/events/${id}`, { method: 'PATCH', body: JSON.stringify(changes) }),
+    remove: (id: string) => request<void>(`/events/${id}`, { method: 'DELETE' }),
+  },
+  transactions: {
+    list: () => request<ApiTxn[]>('/transactions'),
+    create: (input: NewTxn) =>
+      request<ApiTxn>('/transactions', { method: 'POST', body: JSON.stringify(input) }),
+    remove: (id: string) => request<void>(`/transactions/${id}`, { method: 'DELETE' }),
+  },
+  courses: {
+    list: () => request<ApiCourse[]>('/courses'),
+    update: (id: string, changes: { done: number }) =>
+      request<ApiCourse>(`/courses/${id}`, { method: 'PATCH', body: JSON.stringify(changes) }),
+  },
+  goals: {
+    list: () => request<ApiGoal[]>('/goals'),
+    create: (input: NewGoal) =>
+      request<ApiGoal>('/goals', { method: 'POST', body: JSON.stringify(input) }),
+    update: (id: string, changes: Partial<NewGoal & { current: number }>) =>
+      request<ApiGoal>(`/goals/${id}`, { method: 'PATCH', body: JSON.stringify(changes) }),
+    remove: (id: string) => request<void>(`/goals/${id}`, { method: 'DELETE' }),
+  },
+  healthlog: {
+    get: () => request<ApiHealth>('/healthlog'),
+    update: (input: ApiHealth) =>
+      request<ApiHealth>('/healthlog', { method: 'PUT', body: JSON.stringify(input) }),
+  },
+}
+
+export type ApiTask = {
+  id: string
+  title: string
+  category: string
+  priority: 'High' | 'Medium' | 'Low'
+  due: string
+  done: boolean
+}
+
+export type NewTask = {
+  title: string
+  category: string
+  priority: 'High' | 'Medium' | 'Low'
+  due: string
+}
+
+export type ApiEvent = {
+  id: string
+  title: string
+  place: string
+  starts_at: string
+  ends_at: string | null
+  tone: 'blue' | 'violet' | 'orange' | 'green'
+}
+
+export type NewEvent = {
+  title: string
+  place: string
+  starts_at: string
+  tone: 'blue' | 'violet' | 'orange' | 'green'
+}
+
+export type ApiTxn = {
+  id: string
+  label: string
+  amount: number
+  type: string
+  date: string
+}
+
+export type NewTxn = {
+  label: string
+  amount: number
+  type: 'income' | 'expense' | 'savings'
+  date?: string
+}
+
+export type ApiCourse = {
+  id: string
+  name: string
+  done: number
+  total: number
+  tone: string
+}
+
+export type ApiGoal = {
+  id: string
+  title: string
+  current: number
+  target: number
+  unit: string
+  tone: string
+}
+
+export type NewGoal = {
+  title: string
+  target: number
+  unit: string
+  tone: 'indigo' | 'green' | 'orange'
+}
+
+export type ApiHealth = {
+  steps: number
+  sleep: number
+  water: number
+  diet: boolean
 }
