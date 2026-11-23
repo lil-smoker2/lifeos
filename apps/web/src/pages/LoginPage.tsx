@@ -9,7 +9,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from ?? '/'
-  const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -21,7 +21,7 @@ export function LoginPage() {
     setError(null)
     setBusy(true)
     try {
-      await login(email, password)
+      await login(name, password)
       navigate(from, { replace: true })
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : 'Unable to sign in right now.')
@@ -34,11 +34,11 @@ export function LoginPage() {
     <div className="auth-form">
       <p className="eyebrow">Sign in</p>
       <h2>Welcome back</h2>
-      <p className="auth-lead">Use the email and password for your LifeOS account.</p>
+      <p className="auth-lead">Use your name and password to open LifeOS.</p>
 
       <form className="auth-fields" onSubmit={submit}>
-        <label className="field"><span>Email</span>
-          <input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" required />
+        <label className="field"><span>Name</span>
+          <input value={name} onChange={event => setName(event.target.value)} autoComplete="name" required />
         </label>
         <label className="field"><span>Password</span>
           <input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" required />
@@ -51,6 +51,9 @@ export function LoginPage() {
 
       <p className="auth-switch">
         New to LifeOS? <Link to="/register">Create an account</Link>
+      </p>
+      <p className="auth-switch">
+        Forgot your password? <Link to="/reset-password">Use a recovery code</Link>
       </p>
     </div>
   )

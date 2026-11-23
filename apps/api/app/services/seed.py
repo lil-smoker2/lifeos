@@ -1,8 +1,26 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from app.models import Course, Event, Goal, HealthLog, Task, Transaction, User
+from app.core.config import get_settings
+from app.models import (
+    Activity,
+    Alert,
+    AutomationRule,
+    Course,
+    Document,
+    Event,
+    Goal,
+    HealthLog,
+    Note,
+    Reminder,
+    Task,
+    Transaction,
+    User,
+)
+
+settings = get_settings()
 
 SEED_TASKS = [
     {"title": "Review project proposal", "category": "Work", "priority": "High", "due_time": "09:00", "done": True},
@@ -46,9 +64,67 @@ SEED_GOALS = [
 
 SEED_HEALTH = {"steps": 7500, "sleep_minutes": 432, "water_ml": 1800, "diet_ok": True}
 
+SEED_NOTES = [
+    {"title": "Renaissance art timeline", "emoji": "🎨", "class_name": "ENG 455", "type": "Lecture", "reviewed": False, "body": "Early Renaissance, High Renaissance and Mannerism timeline."},
+    {"title": "Big-O cheat sheet", "emoji": "🧮", "class_name": "COSC 210", "type": "Study Group", "reviewed": True, "body": "Common complexity classes and examples."},
+    {"title": "Macroeconomics: inflation notes", "emoji": "📈", "class_name": "ECON 302", "type": "Reading", "reviewed": False, "body": "Demand-pull versus cost-push inflation."},
+    {"title": "Python decorators explained", "emoji": "🐍", "class_name": "Python", "type": "Section", "reviewed": True, "body": "Functions that wrap other functions."},
+    {"title": "Essay outline: modernism", "emoji": "✍️", "class_name": "ENG 455", "type": "Seminar", "reviewed": False, "body": "Thesis, three supporting arguments, counterpoint."},
+]
+
+SEED_DOCUMENTS = [
+    {"name": "Thesis draft v2.txt", "kind": "TXT", "tag": "Thesis", "content": "LifeOS thesis draft v2\n\nChapter 1: Introduction\nChapter 2: Background\n"},
+    {"name": "Calculus notes.txt", "kind": "TXT", "tag": "Study", "content": "Derivatives\nIntegrals\nSeries and sequences\n"},
+    {"name": "Budget 2026.csv", "kind": "CSV", "tag": "Finance", "content": "month,income,expenses,savings\nJanuary,1200,480,200\nFebruary,1200,520,200\n"},
+    {"name": "Campus map.txt", "kind": "TXT", "tag": "Personal", "content": "Library: block A\nStudent union: block C\nSports hall: block E\n"},
+]
+
+SEED_RULES = [
+    {"trigger": "Task completed", "trigger_kind": "task_completed", "action": "Log an activity entry", "active": True, "runs": 12},
+    {"trigger": "New expense added", "trigger_kind": "expense_added", "action": "Update monthly budget", "active": True, "runs": 7},
+    {"trigger": "Study session ended", "trigger_kind": "study_session", "action": "Add 30 min to learning goal", "active": False, "runs": 3},
+]
+
+SEED_ACTIVITY = [
+    {"title": "Completed “Review project proposal”", "offset_minutes": 120},
+    {"title": "Added a note to COSC 210", "offset_minutes": 300},
+    {"title": "Logged 7,500 steps", "offset_minutes": 60 * 24},
+    {"title": "Paid internet bill", "offset_minutes": 60 * 26},
+]
+
+SEED_ALERTS = [
+    {"title": "3 tasks are due before 18:00", "detail": "Mathematics exercises and 2 more", "kind": "task", "read": False, "offset_minutes": 12},
+    {"title": "Internet bill due Nov 20", "detail": "Budgeted at $45 from Finance", "kind": "finance", "read": False, "offset_minutes": 120},
+    {"title": "5 notes awaiting review", "detail": "Including Renaissance art timeline", "kind": "note", "read": False, "offset_minutes": 60 * 24},
+    {"title": "Automation rule paused", "detail": "“Study session ended” is inactive", "kind": "system", "read": True, "offset_minutes": 60 * 26},
+]
+
+SEED_REMINDERS = [
+    {"title": "Submit research summary", "badge": "red", "done": False},
+    {"title": "Call the registrar", "badge": "purple", "done": False},
+    {"title": "Renew library books", "badge": "gold", "done": False},
+]
+
+
+def _write_seed_document(user: User, index: int, doc: dict) -> Document:
+    upload_dir = Path(settings.upload_dir)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    suffix = Path(doc["name"]).suffix
+    stored_name = f"seed-{user.id[:8]}-{index}{suffix}"
+    payload = doc["content"].encode("utf-8")
+    (upload_dir / stored_name).write_bytes(payload)
+    return Document(
+        user_id=user.id,
+        name=doc["name"],
+        kind=doc["kind"],
+        size_bytes=len(payload),
+        tag=doc["tag"],
+        stored_name=stored_name,
+    )
+
 
 def ensure_user_seed(db: Session, user: User) -> None:
-    if user.seed_version >= 2:
+    if user.seed_version >= 3:
         return
 
     if user.seed_version < 1:
@@ -67,6 +143,37 @@ def ensure_user_seed(db: Session, user: User) -> None:
             db.add(Goal(user_id=user.id, **item))
         db.add(HealthLog(user_id=user.id, log_date=date.today(), **SEED_HEALTH))
         user.seed_version = 2
+
+    if user.seed_version < 3:
+        for item in SEED_NOTES:
+            db.add(Note(user_id=user.id, **item))
+        for index, doc in enumerate(SEED_DOCUMENTS):
+            db.add(_write_seed_document(user, index, doc))
+        for item in SEED_RULES:
+            db.add(AutomationRule(user_id=user.id, **item))
+        now = datetime.now(UTC)
+        for item in SEED_ACTIVITY:
+            db.add(
+                Activity(
+                    user_id=user.id,
+                    title=item["title"],
+                    occurred_at=now - timedelta(minutes=item["offset_minutes"]),
+                )
+            )
+        for item in SEED_ALERTS:
+            db.add(
+                Alert(
+                    user_id=user.id,
+                    title=item["title"],
+                    detail=item["detail"],
+                    kind=item["kind"],
+                    read=item["read"],
+                    created_at=now - timedelta(minutes=item["offset_minutes"]),
+                )
+            )
+        for item in SEED_REMINDERS:
+            db.add(Reminder(user_id=user.id, **item))
+        user.seed_version = 3
 
     user.seeded = True
     db.commit()

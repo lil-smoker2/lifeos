@@ -1,5 +1,5 @@
-from datetime import date
-from typing import Literal
+import datetime
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -10,13 +10,15 @@ class TxnCreate(BaseModel):
     label: str = Field(min_length=1, max_length=255)
     amount: float = Field(gt=0)
     type: TxnType = "expense"
-    date: date | None = None
+    currency: str = Field(default="USD", pattern="^[A-Z]{3}$")
+    date: datetime.date | None = None
 
 
 class TxnOut(BaseModel):
     id: str
     label: str
     amount: float
+    currency: str
     type: str
     date: str
 

@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.models import Task, User
 from app.schemas.planner import TaskCreate, TaskOut, TaskUpdate
+from app.services.automation import fire_trigger
 from app.services.seed import ensure_user_seed
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -55,11 +56,14 @@ def update_task(
     db: Session = Depends(get_db),
 ) -> Task:
     task = task_or_404(db, user, task_id)
+    was_done = task.done
     changes = {key: value for key, value in payload.model_dump(exclude_unset=True).items() if value is not None}
     if "due" in changes:
         changes["due_time"] = changes.pop("due")
     for key, value in changes.items():
         setattr(task, key, value)
+    if task.done and not was_done:
+        fire_trigger(db, user, "task_completed", task.title)
     db.commit()
     db.refresh(task)
     return task

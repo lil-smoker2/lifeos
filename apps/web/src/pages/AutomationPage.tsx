@@ -1,28 +1,30 @@
 import { useState, type FormEvent } from 'react'
 import { Play, Plus, Zap } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
-import { STORE_KEYS, seedActivity, seedRules, type Activity, type Rule } from '../lib/seed'
-import { useLocalStore, uid } from '../lib/useLocalStore'
+import { useAutomation } from '../features/automation/useAutomation'
+
+type TriggerKind = 'task_completed' | 'expense_added' | 'study_session'
+
+const TRIGGER_KINDS: { value: TriggerKind; label: string }[] = [
+  { value: 'task_completed', label: 'Task completed' },
+  { value: 'expense_added', label: 'New expense added' },
+  { value: 'study_session', label: 'Study session ended' },
+]
 
 export function AutomationPage() {
-  const [rules, setRules] = useLocalStore<Rule[]>(STORE_KEYS.rules, seedRules)
-  const [activity, setActivity] = useLocalStore<Activity[]>(STORE_KEYS.activity, seedActivity)
+  const { rules, activity, createRule, updateRule, runRule } = useAutomation()
   const [trigger, setTrigger] = useState('')
+  const [triggerKind, setTriggerKind] = useState<TriggerKind>('task_completed')
   const [action, setAction] = useState('')
 
   const activeCount = rules.filter(rule => rule.active).length
-
-  function runRule(rule: Rule) {
-    setRules(current => current.map(item => (item.id === rule.id ? { ...item, runs: item.runs + 1 } : item)))
-    setActivity(current => [{ id: uid(), title: `Ran “${rule.trigger} → ${rule.action}”`, time: 'Just now' }, ...current])
-  }
 
   function addRule(event: FormEvent) {
     event.preventDefault()
     const cleanTrigger = trigger.trim()
     const cleanAction = action.trim()
     if (!cleanTrigger || !cleanAction) return
-    setRules(current => [...current, { id: uid(), trigger: cleanTrigger, action: cleanAction, active: true, runs: 0 }])
+    createRule.mutate({ trigger: cleanTrigger, trigger_kind: triggerKind, action: cleanAction, active: true })
     setTrigger('')
     setAction('')
   }
@@ -51,16 +53,21 @@ export function AutomationPage() {
                   <strong>When {rule.trigger.toLowerCase()}</strong>
                   <span>Then {rule.action.toLowerCase()} · {rule.runs} runs</span>
                 </div>
-                <button className={`switch ${rule.active ? 'on' : ''}`} type="button" role="switch" aria-checked={rule.active} aria-label={`Toggle ${rule.trigger}`} onClick={() => setRules(current => current.map(item => (item.id === rule.id ? { ...item, active: !item.active } : item)))}>
+                <button className={`switch ${rule.active ? 'on' : ''}`} type="button" role="switch" aria-checked={rule.active} aria-label={`Toggle ${rule.trigger}`} onClick={() => updateRule.mutate({ id: rule.id, changes: { active: !rule.active } })}>
                   <span />
                 </button>
-                <button className="btn btn-ghost" type="button" onClick={() => runRule(rule)}><Play size={14} /> Run</button>
+                <button className="btn btn-ghost" type="button" onClick={() => runRule.mutate(rule.id)}><Play size={14} /> Run</button>
               </div>
             ))}
           </div>
 
           <form className="inline-form" onSubmit={addRule}>
             <input value={trigger} onChange={event => setTrigger(event.target.value)} placeholder="Trigger (e.g. task completed)" aria-label="Rule trigger" required />
+            <select value={triggerKind} onChange={event => setTriggerKind(event.target.value as TriggerKind)} aria-label="Trigger type" required>
+              {TRIGGER_KINDS.map(kind => (
+                <option key={kind.value} value={kind.value}>{kind.label}</option>
+              ))}
+            </select>
             <input value={action} onChange={event => setAction(event.target.value)} placeholder="Action (e.g. log activity)" aria-label="Rule action" required />
             <button className="btn btn-primary" type="submit"><Plus size={16} /> Add rule</button>
           </form>

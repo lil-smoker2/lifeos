@@ -1,13 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
-import { STORE_KEYS, seedNotes, type Note } from '../lib/seed'
-import { useLocalStore, uid } from '../lib/useLocalStore'
+import { useNotes } from '../features/notes/useNotes'
 
 const TYPES = ['Lecture', 'Reading', 'Study Group', 'Section', 'Seminar']
 
 export function NotesPage() {
-  const [notes, setNotes] = useLocalStore<Note[]>(STORE_KEYS.notes, seedNotes)
+  const { notes, create, update, remove } = useNotes()
   const [tab, setTab] = useState<'all' | 'class' | 'review'>('all')
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
@@ -16,7 +15,7 @@ export function NotesPage() {
   const [type, setType] = useState('Lecture')
 
   const visible = notes.filter(note => {
-    if (tab === 'class') return note.className === 'ENG 455'
+    if (tab === 'class') return note.class_name === 'ENG 455'
     if (tab === 'review') return !note.reviewed
     return true
   })
@@ -25,13 +24,13 @@ export function NotesPage() {
     event.preventDefault()
     const cleanTitle = title.trim()
     if (!cleanTitle) return
-    setNotes(current => [{ id: uid(), title: cleanTitle, emoji: emoji || '📝', className, type, reviewed: false }, ...current])
+    create.mutate({ title: cleanTitle, emoji: emoji || '📝', class_name: className, type })
     setTitle('')
     setCreating(false)
   }
 
-  function toggleReviewed(id: string) {
-    setNotes(current => current.map(note => (note.id === id ? { ...note, reviewed: !note.reviewed } : note)))
+  function toggleReviewed(note: { id: string; reviewed: boolean }) {
+    update.mutate({ id: note.id, changes: { reviewed: !note.reviewed } })
   }
 
   return (
@@ -76,13 +75,13 @@ export function NotesPage() {
             {visible.map(note => (
               <tr key={note.id}>
                 <td>
-                  <input type="checkbox" checked={note.reviewed} onChange={() => toggleReviewed(note.id)} aria-label={`Mark ${note.title} reviewed`} />
+                  <input type="checkbox" checked={note.reviewed} onChange={() => toggleReviewed(note)} aria-label={`Mark ${note.title} reviewed`} />
                 </td>
                 <td><span className="note-name">{note.emoji} {note.title}</span></td>
-                <td><span className={`class-pill ${note.className.split(' ')[0].toLowerCase()}`}>{note.className}</span></td>
+                <td><span className={`class-pill ${note.class_name.split(' ')[0].toLowerCase()}`}>{note.class_name}</span></td>
                 <td><span className="type-pill">{note.type}</span></td>
                 <td>
-                  <button className="icon-ghost" type="button" aria-label={`Delete ${note.title}`} onClick={() => setNotes(current => current.filter(item => item.id !== note.id))}>
+                  <button className="icon-ghost" type="button" aria-label={`Delete ${note.title}`} onClick={() => remove.mutate(note.id)}>
                     <Trash2 size={15} />
                   </button>
                 </td>

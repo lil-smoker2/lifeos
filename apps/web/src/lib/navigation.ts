@@ -1,5 +1,5 @@
 import {
-  BookOpen, Bot, CalendarDays, FolderOpen, GraduationCap, Heart, HelpCircle,
+  BookOpen, Bot, CalendarDays, CreditCard, FolderOpen, GraduationCap, Heart, HelpCircle,
   LayoutDashboard, Settings, Target, WalletCards, Zap,
 } from 'lucide-react'
 
@@ -8,6 +8,7 @@ export const NAV_ITEMS = [
   { to: '/planner', label: 'Planner', icon: CalendarDays },
   { to: '/learning', label: 'Study & Learning', icon: GraduationCap },
   { to: '/finance', label: 'Finance', icon: WalletCards },
+  { to: '/budget', label: 'Budget', icon: CreditCard },
   { to: '/health', label: 'Health & Fitness', icon: Heart },
   { to: '/notes', label: 'Notes & Knowledge', icon: BookOpen },
   { to: '/files', label: 'Files & Documents', icon: FolderOpen },

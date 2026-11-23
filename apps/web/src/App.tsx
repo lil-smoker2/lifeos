@@ -13,6 +13,7 @@ const TasksPage = lazy(() => import('./pages/TasksPage').then(module => ({ defau
 const PlannerPage = lazy(() => import('./pages/PlannerPage').then(module => ({ default: module.PlannerPage })))
 const LearningPage = lazy(() => import('./pages/LearningPage').then(module => ({ default: module.LearningPage })))
 const FinancePage = lazy(() => import('./pages/FinancePage').then(module => ({ default: module.FinancePage })))
+const BudgetPage = lazy(() => import('./pages/BudgetPage').then(module => ({ default: module.BudgetPage })))
 const HealthPage = lazy(() => import('./pages/HealthPage').then(module => ({ default: module.HealthPage })))
 const NotesPage = lazy(() => import('./pages/NotesPage').then(module => ({ default: module.NotesPage })))
 const FilesPage = lazy(() => import('./pages/FilesPage').then(module => ({ default: module.FilesPage })))
@@ -25,6 +26,7 @@ const AlertsPage = lazy(() => import('./pages/AlertsPage').then(module => ({ def
 const WelcomePage = lazy(() => import('./pages/WelcomePage').then(module => ({ default: module.WelcomePage })))
 const LoginPage = lazy(() => import('./pages/LoginPage').then(module => ({ default: module.LoginPage })))
 const RegisterPage = lazy(() => import('./pages/RegisterPage').then(module => ({ default: module.RegisterPage })))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(module => ({ default: module.ResetPasswordPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,6 +50,7 @@ export default function App() {
                   <Route path="welcome" element={<WelcomePage />} />
                   <Route path="login" element={<LoginPage />} />
                   <Route path="register" element={<RegisterPage />} />
+                  <Route path="reset-password" element={<ResetPasswordPage />} />
                 </Route>
 
                 <Route element={<RequireAuth />}>
@@ -57,6 +60,7 @@ export default function App() {
                     <Route path="planner" element={<PlannerPage />} />
                     <Route path="learning" element={<LearningPage />} />
                     <Route path="finance" element={<FinancePage />} />
+                    <Route path="budget" element={<BudgetPage />} />
                     <Route path="health" element={<HealthPage />} />
                     <Route path="notes" element={<NotesPage />} />
                     <Route path="files" element={<FilesPage />} />

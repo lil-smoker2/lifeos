@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { Flame, Laptop, Plus, Target, Trash2, Trophy } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
-import { STORE_KEYS, goalPercent, seedGoals, type Goal } from '../lib/seed'
-import { useLocalStore, uid } from '../lib/useLocalStore'
+import { useGoals } from '../features/goals/useGoals'
+import { goalPercent } from '../lib/seed'
 
 const ICONS = [Trophy, Laptop, Flame, Target]
 
 export function GoalsPage() {
-  const [goals, setGoals] = useLocalStore<Goal[]>(STORE_KEYS.goals, seedGoals)
+  const { goals, create, update, remove } = useGoals()
   const [title, setTitle] = useState('')
   const [target, setTarget] = useState('10')
   const [unit, setUnit] = useState('books')
@@ -19,16 +19,13 @@ export function GoalsPage() {
     const cleanTitle = title.trim()
     const parsedTarget = Number(target)
     if (!cleanTitle || !Number.isFinite(parsedTarget) || parsedTarget <= 0) return
-    setGoals(current => [...current, { id: uid(), title: cleanTitle, current: 0, target: parsedTarget, unit, tone: 'indigo' }])
+    create.mutate({ title: cleanTitle, target: parsedTarget, unit, tone: 'indigo' })
     setTitle('')
   }
 
-  function bump(goal: Goal, delta: number) {
-    setGoals(current => current.map(item => {
-      if (item.id !== goal.id) return item
-      const next = Math.min(item.target, Math.max(0, item.current + delta))
-      return { ...item, current: next }
-    }))
+  function bump(goal: { id: string; current: number; target: number }, delta: number) {
+    const next = Math.min(goal.target, Math.max(0, goal.current + delta))
+    update.mutate({ id: goal.id, changes: { current: next } })
   }
 
   return (
@@ -53,7 +50,7 @@ export function GoalsPage() {
             <article className="card goal-card" key={goal.id}>
               <div className="goal-card-head">
                 <span className={`mini-icon goal-${goal.tone}`}><Icon size={18} /></span>
-                <button className="icon-ghost" type="button" aria-label={`Delete ${goal.title}`} onClick={() => setGoals(current => current.filter(item => item.id !== goal.id))}>
+                <button className="icon-ghost" type="button" aria-label={`Delete ${goal.title}`} onClick={() => remove.mutate(goal.id)}>
                   <Trash2 size={15} />
                 </button>
               </div>

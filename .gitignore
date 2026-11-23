@@ -18,3 +18,10 @@ __pycache__/
 # Tool state
 .kilo/
 .vscode/
+
+# Uploaded documents
+uploads/
+apps/api/.test_uploads/
+
+# Browser drivers
+chromedriver-*/

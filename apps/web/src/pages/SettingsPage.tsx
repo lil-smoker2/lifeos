@@ -55,7 +55,7 @@ export function SettingsPage() {
 
         <div className="settings-side">
           <section className="card">
-            <header className="card-head"><h2>Account</h2><p>{user?.email}</p></header>
+            <header className="card-head"><h2>Account</h2><p>{user?.name}</p></header>
             <p className="note">Signed in with a JWT session that lasts 24 hours. Module data is still stored in this browser until Phase 4.5.</p>
             <button
               className="btn btn-ghost danger"

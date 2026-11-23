@@ -2,19 +2,16 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Bell, Command, LogOut, Moon, Search, Star, Sun } from 'lucide-react'
 import { useAuth } from '../features/auth/auth-context'
-import { useEvents } from '../features/events/useEvents'
-import { useTasks } from '../features/tasks/useTasks'
+import { useAlerts } from '../features/alerts/useAlerts'
+import { useSearch } from '../features/search/useSearch'
 import { useTheme } from '../features/theme/theme-context'
 import { NAV_ITEMS } from '../lib/navigation'
-import { searchRecords, type SearchHit } from '../lib/search'
-import { clockTime, dayOf } from '../lib/dates'
-import {
-  STORE_KEYS, seedAlerts, seedFiles, seedNotes, seedProfile,
-  type Alert, type FileDoc, type Note, type Profile,
-} from '../lib/seed'
+import type { SearchHit } from '../lib/search'
+import { STORE_KEYS, seedProfile, type Profile } from '../lib/seed'
 import { useLocalStore } from '../lib/useLocalStore'
+import type { ApiAlert } from '../services/api'
 
-const ALERT_ROUTES: Record<Alert['kind'], string> = {
+const ALERT_ROUTES: Record<ApiAlert['kind'], string> = {
   task: '/tasks',
   finance: '/finance',
   note: '/notes',
@@ -53,11 +50,7 @@ export function AppShell() {
   const { logout } = useAuth()
   const navigate = useNavigate()
   const [profile] = useLocalStore<Profile>(STORE_KEYS.profile, seedProfile)
-  const { tasks } = useTasks()
-  const { events } = useEvents()
-  const [notes] = useLocalStore<Note[]>(STORE_KEYS.notes, seedNotes)
-  const [files] = useLocalStore<FileDoc[]>(STORE_KEYS.files, seedFiles)
-  const [alerts, setAlerts] = useLocalStore<Alert[]>(STORE_KEYS.alerts, seedAlerts)
+  const { alerts, unread, update: updateAlert, readAll } = useAlerts()
 
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -66,7 +59,7 @@ export function AppShell() {
   const searchRef = useRef<HTMLInputElement>(null)
   const alertsRef = useRef<HTMLDivElement>(null)
 
-  const unread = alerts.filter(alert => !alert.read).length
+  const { hits: recordHits } = useSearch(query.trim())
 
   const hits = useMemo<SearchHit[]>(() => {
     const term = query.trim().toLowerCase()
@@ -74,15 +67,8 @@ export function AppShell() {
     const pageHits: SearchHit[] = NAV_ITEMS.filter(item => item.label.toLowerCase().includes(term))
       .slice(0, 4)
       .map(item => ({ id: `page-${item.to}`, title: item.label, subtitle: 'Page', to: item.to, group: 'Pages' }))
-    const searchEvents = events.map(event => ({
-      id: event.id,
-      title: event.title,
-      place: event.place,
-      day: dayOf(event.starts_at),
-      start: clockTime(event.starts_at),
-    }))
-    return [...pageHits, ...searchRecords(term, { tasks, events: searchEvents, notes, files })]
-  }, [query, tasks, events, notes, files])
+    return [...pageHits, ...recordHits]
+  }, [query, recordHits])
 
   const closeSearch = useCallback(() => {
     setSearchOpen(false)
@@ -127,14 +113,14 @@ export function AppShell() {
     navigate('/welcome', { replace: true })
   }
 
-  function openAlert(alert: Alert) {
-    setAlerts(current => current.map(item => (item.id === alert.id ? { ...item, read: true } : item)))
+  function openAlert(alert: ApiAlert) {
+    updateAlert.mutate({ id: alert.id, read: true })
     setAlertsOpen(false)
     navigate(ALERT_ROUTES[alert.kind])
   }
 
   function markAllRead() {
-    setAlerts(current => current.map(alert => ({ ...alert, read: true })))
+    readAll.mutate()
   }
 
   const initials = profile.name

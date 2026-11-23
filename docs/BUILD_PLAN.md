@@ -29,12 +29,12 @@ breaks the homepage, fix it before moving on.
 
 ---
 
-## Where the build stands (snapshot: 2026-11-18)
+## Where the build stands (snapshot: 2026-11-20)
 
-**Done:** the entire frontend prototype. A routed React SPA with a persistent
-light/dark theme, a theme-aware dashboard (light 5-stat layout and dark 3×3
-widget matrix), thirteen working module pages backed by `localStorage`,
-global Cmd/Ctrl+K search, an alerts inbox, responsive navigation, and
+**Done:** a routed React SPA with a persistent light/dark theme, a
+theme-aware dashboard (light 5-stat layout and dark 3×3 widget matrix),
+thirteen working module pages backed by the authenticated API, global
+Cmd/Ctrl+K server search, an alerts inbox, responsive navigation, and
 route-level code splitting. `npm run build` (TypeScript + Vite) and
 `npm run lint` (oxlint) pass with no warnings. The
 Phase 1 build is installed as a desktop launcher named **LifeOS** that serves
@@ -49,12 +49,12 @@ bcrypt passwords and a bearer-token user dependency.
 Phase 4.4 adds a typed API client, TanStack Query, JWT-backed sessions and
 guarded routes with public welcome/login/register pages.
 
-**Not started:** real persistence for module data, PWA / desktop packaging,
-and the automation engine beyond frontend simulation.
+**Phase 4 complete:** every module now persists through the authenticated
+API: tasks and events, finance, learning, goals, health, notes, files,
+notifications, search, the AI assistant and automation rules with run
+history. Frontend pages read and write through TanStack Query.
 
-This means the app currently behaves like a polished offline demo: everything
-is editable and survives refresh (per browser), but nothing syncs between
-devices and there is no account system yet.
+**Phase 5 in progress:** Step 5.1 (PWA manifest + service worker) complete — offline shell generated at build time, app installable from browser.
 
 ### Verified commands
 
@@ -219,17 +219,17 @@ lifesmart/
 | 4.3 | Auth (register, login, JWT) | ✅ |
 | 4.4 | API client and auth-aware frontend | ✅ |
 | 4.5 | Persist tasks and events | ✅ |
-| 4.6 | Persist finance, learning, goals, health | ⬜ |
-| 4.7 | Persist notes and files (upload) | ⬜ |
-| 4.8 | Notifications and search endpoints | ⬜ |
-| 4.9 | Pluggable AI provider | ⬜ |
-| 4.10 | Automation engine with run history | ⬜ |
+| 4.6 | Persist finance, learning, goals, health | ✅ |
+| 4.7 | Persist notes and files (upload) | ✅ |
+| 4.8 | Notifications and search endpoints | ✅ |
+| 4.9 | Pluggable AI provider | ✅ |
+| 4.10 | Automation engine with run history | ✅ |
 
 ### Phase 5 — Packaging
 
 | Step | Name | Status |
 |---|---|---|
-| 5.1 | PWA manifest and service worker | ⬜ |
+| 5.1 | PWA manifest and service worker | ✅ |
 | 5.2 | Desktop wrapper (Electron or Tauri) | ⬜ |
 | 5.3 | Installable build and smoke test | ⬜ |
 
@@ -533,38 +533,49 @@ TanStack Query.
 delete, 401 unauthenticated); `npm run build` and `npm run lint` pass.
 
 ### STEP 4.6 — Persist finance, learning, goals, health
-**STATUS:** ⬜ pending
-**BUILD:** Routers, summary endpoints, migration of the remaining local
-stores to queries. Keep KSh/USD display logic presentation-only.
-**VERIFY:** Each module survives reload and reports the same totals as the
-API summary endpoints.
+**STATUS:** ✅ done
+**BUILD:** `/api/transactions/summary`, `/api/courses/summary`,
+`/api/goals/summary`, `/api/health-log` and the combined `/api/summary`
+endpoint. Finance, Learning, Goals, Health and Dashboard widgets now read
+from TanStack Query hooks instead of `localStorage`. KSh/USD display logic
+stays presentation-only.
+**VERIFY:** Module edits survive reload and API summary totals match page
+totals; `npm run build` and `npm run lint` pass.
 
 ### STEP 4.7 — Persist notes and files (upload)
-**STATUS:** ⬜ pending
-**BUILD:** Notes router; document upload to local disk with metadata rows;
-preview and download endpoints; file size limits.
-**VERIFY:** Uploaded file can be downloaded; notes table paginates.
+**STATUS:** ✅ done
+**BUILD:** `/api/notes` with `limit`/`offset` pagination;
+`/api/documents` upload (10 MB limit), list, preview, download and delete;
+files stored on local disk with metadata rows. Notes and Files pages use
+query hooks.
+**VERIFY:** Uploaded file can be previewed and downloaded; notes paginate;
+seeded notes and documents appear after login.
 
 ### STEP 4.8 — Notifications and search endpoints
-**STATUS:** ⬜ pending
-**BUILD:** `/api/search` across tasks, notes, files and events;
-`/api/alerts` with read/unread state.
-**VERIFY:** Cmd/Ctrl+K returns server search results; bell count matches
-unread alerts.
+**STATUS:** ✅ done
+**BUILD:** `/api/search` returns grouped task, event, note and file hits;
+`/api/alerts` supports list, read/unread, read-all and delete. The topbar
+search and bell count read from the API.
+**VERIFY:** Cmd/Ctrl+K returns server results for tasks, events, notes and
+files; bell count matches unread alerts; mark read/all read persist.
 
 ### STEP 4.9 — Pluggable AI provider
-**STATUS:** ⬜ pending
-**BUILD:** `/api/assistant` with a rule-based default and an optional provider
-adapter behind an env flag; conversation history optional.
-**VERIFY:** Existing prompts produce the same answers as the local build;
-without a key the rule-based path still works.
+**STATUS:** ✅ done
+**BUILD:** `/api/assistant` builds a live snapshot from tasks, courses,
+goals, transactions, health and notes. The rule-based path is the default;
+`LIFEOS_AI_PROVIDER` + `LIFEOS_AI_API_KEY` enable an OpenAI-compatible
+chat-completions adapter with rule-based fallback on any error.
+**VERIFY:** Existing prompts answer from account data; without a key the
+rule-based path still works.
 
 ### STEP 4.10 — Automation engine with run history
-**STATUS:** ⬜ pending
-**BUILD:** Real triggers on task completion, expense creation and study
-sessions; rule execution writes activity rows; run history endpoint.
+**STATUS:** ✅ done
+**BUILD:** `/api/automation/rules` CRUD, manual run, and
+`/api/automation/activity` run history. Task completion, expense creation
+and lesson progress fire matching active rules and write activity rows.
+Automation page reads rules and history from the API.
 **VERIFY:** Completing a task with an active rule produces an activity entry
-and increments run count server-side.
+and increments the rule run count server-side.
 
 ---
 
@@ -605,9 +616,7 @@ data persists between launches.
 
 ## Next recommended step
 
-**4.6 — Persist finance, learning, goals, health.** Tasks and events now live
-on the API. Next, add routers for the remaining planner stores and switch the
-Finance, Learning, Goals and Health pages to TanStack Query.
+**5.2 — Desktop wrapper.** Phase 5 Step 5.1 (PWA) is complete. Next, add an Electron or Tauri shell around the built frontend for native desktop distribution.
 
 ---
 

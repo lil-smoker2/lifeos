@@ -1,4 +1,6 @@
 from datetime import UTC, datetime, timedelta
+import hashlib
+import secrets
 
 import bcrypt
 import jwt
@@ -17,6 +19,15 @@ def verify_password(password: str, hashed_password: str) -> bool:
         return bcrypt.checkpw(password.encode("utf-8")[:72], hashed_password.encode("utf-8"))
     except ValueError:
         return False
+
+
+def create_recovery_codes(count: int = 8) -> list[str]:
+    return [secrets.token_hex(16).upper() for _ in range(count)]
+
+
+def hash_recovery_code(code: str) -> str:
+    normalized = code.replace("-", "").replace(" ", "").upper()
+    return hashlib.sha256(normalized.encode("ascii")).hexdigest()
 
 
 def create_access_token(subject: str) -> str:

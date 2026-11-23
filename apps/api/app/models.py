@@ -20,12 +20,20 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    name: Mapped[str] = mapped_column(String(120), default="")
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    name: Mapped[str] = mapped_column(String(120), unique=True, index=True)
     role: Mapped[str] = mapped_column(String(120), default="Student")
     hashed_password: Mapped[str] = mapped_column(String(255), default="")
     seeded: Mapped[bool] = mapped_column(Boolean, default=False)
     seed_version: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class RecoveryCode(Base):
+    __tablename__ = "recovery_codes"
+
+    code_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -135,6 +143,7 @@ class AutomationRule(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     user_id: Mapped[Optional[str]] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     trigger: Mapped[str] = mapped_column(String(255))
+    trigger_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     action: Mapped[str] = mapped_column(String(255))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     runs: Mapped[int] = mapped_column(Integer, default=0)
@@ -170,3 +179,54 @@ class Reminder(Base):
     due_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     badge: Mapped[str] = mapped_column(String(16), default="gold")
     done: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class Budget(Base):
+    __tablename__ = "budgets"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    user_id: Mapped[Optional[str]] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    wallet_amount_minor: Mapped[int] = mapped_column(Integer, default=0)
+    currency: Mapped[str] = mapped_column(String(3), default="USD")
+    food_pct: Mapped[int] = mapped_column(Integer, default=30)
+    rent_pct: Mapped[int] = mapped_column(Integer, default=40)
+    savings_pct: Mapped[int] = mapped_column(Integer, default=30)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    @property
+    def wallet(self) -> float:
+        return round(self.wallet_amount_minor / 100, 2)
+
+
+class BudgetItem(Base):
+    __tablename__ = "budget_items"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    user_id: Mapped[Optional[str]] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(255))
+    price_minor: Mapped[int] = mapped_column(Integer, default=0)
+    affordable: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    @property
+    def price(self) -> float:
+        return round(self.price_minor / 100, 2)
+
+
+class FoodTimetable(Base):
+    __tablename__ = "food_timetable"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    user_id: Mapped[Optional[str]] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    day_of_week: Mapped[int] = mapped_column(Integer, default=0)
+    meal: Mapped[str] = mapped_column(String(255))
+    cost_minor: Mapped[int] = mapped_column(Integer, default=0)
+
+    _DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+    @property
+    def day(self) -> str:
+        return self._DAY_NAMES[self.day_of_week % len(self._DAY_NAMES)]
+
+    @property
+    def cost(self) -> float:
+        return round(self.cost_minor / 100, 2)

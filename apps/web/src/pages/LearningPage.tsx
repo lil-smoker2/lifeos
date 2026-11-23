@@ -1,20 +1,17 @@
 import { GraduationCap, Minus, Plus } from 'lucide-react'
 import { DonutRing } from '../components/DonutRing'
 import { PageHeader } from '../components/PageHeader'
-import { STORE_KEYS, learningPercent, seedCourses, type Course } from '../lib/seed'
-import { useLocalStore } from '../lib/useLocalStore'
+import { useCourses } from '../features/learning/useCourses'
+import { learningPercent } from '../lib/seed'
 
 export function LearningPage() {
-  const [courses, setCourses] = useLocalStore<Course[]>(STORE_KEYS.courses, seedCourses)
+  const { courses, update } = useCourses()
   const overall = learningPercent(courses)
   const totalDone = courses.reduce((sum, course) => sum + course.done, 0)
   const totalLessons = courses.reduce((sum, course) => sum + course.total, 0)
 
-  function adjust(id: string, delta: number) {
-    setCourses(current => current.map(course => {
-      if (course.id !== id) return course
-      return { ...course, done: Math.min(course.total, Math.max(0, course.done + delta)) }
-    }))
+  function adjust(course: { id: string; done: number; total: number }, delta: number) {
+    update.mutate({ id: course.id, done: Math.min(course.total, Math.max(0, course.done + delta)) })
   }
 
   return (
@@ -43,8 +40,8 @@ export function LearningPage() {
                 </div>
                 <div className={`track ${course.tone}`}><i style={{ width: `${percent}%` }} /></div>
                 <div className="stepper">
-                  <button type="button" aria-label={`Remove a ${course.name} lesson`} onClick={() => adjust(course.id, -1)}><Minus size={14} /></button>
-                  <button type="button" aria-label={`Complete a ${course.name} lesson`} onClick={() => adjust(course.id, 1)}><Plus size={14} /></button>
+                  <button type="button" aria-label={`Remove a ${course.name} lesson`} onClick={() => adjust(course, -1)}><Minus size={14} /></button>
+                  <button type="button" aria-label={`Complete a ${course.name} lesson`} onClick={() => adjust(course, 1)}><Plus size={14} /></button>
                 </div>
               </div>
             )

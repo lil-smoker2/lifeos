@@ -7,8 +7,16 @@ from app.core.deps import get_current_user
 from app.models import Goal, User
 from app.schemas.modules import GoalCreate, GoalOut, GoalUpdate
 from app.services.seed import ensure_user_seed
+from app.services.summary import goals_summary as goals_totals
 
 router = APIRouter(prefix="/goals", tags=["goals"])
+
+
+@router.get("/summary")
+def goals_summary(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    ensure_user_seed(db, user)
+    rows = db.scalars(select(Goal).where(Goal.user_id == user.id)).all()
+    return goals_totals(rows)
 
 
 @router.get("", response_model=list[GoalOut])

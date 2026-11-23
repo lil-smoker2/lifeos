@@ -3,11 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron": "electron .",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:build": "npm run build && electron-builder",
+    "electron:pack": "npm run build && electron-builder --dir"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.108.0",
@@ -21,8 +26,58 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^9.2.5",
+    "electron": "^42.11.18",
+    "electron-builder": "^26.18.0",
     "oxlint": "^1.90.0",
     "typescript": "~7.0.2",
-    "vite": "^8.3.6"
+    "vite": "^8.3.6",
+    "vite-plugin-pwa": "^2.0.0",
+    "wait-on": "^8.0.5"
+  },
+  "build": {
+    "appId": "com.lifeos.app",
+    "productName": "LifeOS",
+    "directories": {
+      "buildResources": "public",
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../api",
+        "to": "api",
+        "filter": [
+          "**/*.py",
+          "alembic/**",
+          "alembic.ini",
+          "requirements.txt",
+          ".venv/**"
+        ]
+      }
+    ],
+    "linux": {
+      "target": "AppImage",
+      "category": "Office",
+      "executableName": "lifeos",
+      "desktop": {
+        "Name": "LifeOS",
+        "GenericName": "Personal dashboard",
+        "Comment": "Tasks, planner, finance, learning, health and notes in one place",
+        "Categories": "Office;Finance;Education;"
+      }
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon-512x512.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "public/icon-512x512.png"
+    }
   }
 }

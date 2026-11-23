@@ -6,17 +6,21 @@ import {
   Heart, Laptop, MoreHorizontal, Plus, Send, Target, Trophy, WalletCards,
 } from 'lucide-react'
 import { DonutRing } from '../components/DonutRing'
+import { useAutomation } from '../features/automation/useAutomation'
 import { useEvents } from '../features/events/useEvents'
+import { useTransactions } from '../features/finance/useTransactions'
+import { useGoals } from '../features/goals/useGoals'
+import { useHealth } from '../features/health/useHealth'
+import { useCourses } from '../features/learning/useCourses'
 import { useTasks } from '../features/tasks/useTasks'
 import { useTheme } from '../features/theme/theme-context'
 import { clockTime, dayOf } from '../lib/dates'
 import {
-  STORE_KEYS, balanceOf, goalPercent, learningPercent, money, seedActivity,
-  seedCourses, seedGoals, seedHealth, seedProfile, seedReminders,
-  seedTxns, type Activity, type Course, type Goal,
-  type HealthLog, type Profile, type Reminder, type Txn,
+  STORE_KEYS, goalPercent, learningPercent,
+  seedProfile, seedReminders, type Profile, type Reminder,
 } from '../lib/seed'
 import { useLocalStore } from '../lib/useLocalStore'
+import { formatCurrency } from '../lib/currencies'
 
 const quickTiles = [
   { label: 'Study', detail: '4 courses', to: '/learning', tone: 'grad-blue', icon: GraduationCap },
@@ -51,12 +55,12 @@ export function Dashboard() {
   const navigate = useNavigate()
   const { tasks, update: updateTask } = useTasks()
   const { events } = useEvents()
-  const [txns] = useLocalStore<Txn[]>(STORE_KEYS.txns, seedTxns)
-  const [courses] = useLocalStore<Course[]>(STORE_KEYS.courses, seedCourses)
-  const [goals] = useLocalStore<Goal[]>(STORE_KEYS.goals, seedGoals)
-  const [health] = useLocalStore<HealthLog>(STORE_KEYS.health, seedHealth)
+  const { transactions: txns } = useTransactions()
+  const { courses } = useCourses()
+  const { goals } = useGoals()
+  const { health } = useHealth()
+  const { activity } = useAutomation()
   const [reminders, setReminders] = useLocalStore<Reminder[]>(STORE_KEYS.reminders, seedReminders)
-  const [activity] = useLocalStore<Activity[]>(STORE_KEYS.activity, seedActivity)
   const [profile] = useLocalStore<Profile>(STORE_KEYS.profile, seedProfile)
   const [prompt, setPrompt] = useState(profile.focus)
   const [now, setNow] = useState(() => new Date())
@@ -73,7 +77,15 @@ export function Dashboard() {
     month: now.toLocaleDateString('en-US', { month: 'short' }),
     weekday: now.toLocaleDateString('en-US', { weekday: 'short' }),
   }
-  const balance = balanceOf(txns)
+  const healthLog = health ?? { steps: 0, sleep: 0, water: 0, diet: false }
+  const balances = new Map<string, number>()
+  for (const txn of txns) {
+    const change = txn.type === 'income' ? txn.amount : txn.type === 'expense' ? -txn.amount : 0
+    balances.set(txn.currency, (balances.get(txn.currency) ?? 0) + change)
+  }
+  const balancesLabel = [...balances.entries()]
+    .map(([currency, amount]) => formatCurrency(amount, currency))
+    .join(' · ') || formatCurrency(0, 'USD')
   const learning = learningPercent(courses)
   const goalsAverage = Math.round(goals.reduce((sum, goal) => sum + goalPercent(goal), 0) / Math.max(goals.length, 1))
   const firstName = profile.name.split(' ')[0]
@@ -186,7 +198,7 @@ export function Dashboard() {
 
             <article className="card">
               <header className="card-head"><h2>Finance tracker</h2><span className="trend">↑ +12%</span></header>
-              <div className="finance-value"><strong>{money(balance, true)}</strong><span>This month</span></div>
+              <div className="finance-value"><strong>{balancesLabel}</strong><span>Balances by currency</span></div>
               <Sparkline />
               <div className="legend">
                 <span><i className="key income" /> Income</span>
@@ -214,13 +226,13 @@ export function Dashboard() {
               <header className="card-head"><h2>Health &amp; wellness</h2><Link to="/health">Log</Link></header>
               <div className="health-head">
                 <span className="health-icon"><Heart size={20} /></span>
-                <div><strong>{health.steps.toLocaleString()}</strong><span>steps today</span></div>
+                <div><strong>{healthLog.steps.toLocaleString()}</strong><span>steps today</span></div>
               </div>
-              <div className="track green"><i style={{ width: `${Math.min(100, (health.steps / 10000) * 100)}%` }} /></div>
+              <div className="track green"><i style={{ width: `${Math.min(100, (healthLog.steps / 10000) * 100)}%` }} /></div>
               <div className="health-metrics">
-                <div><span>Sleep</span><strong>{health.sleep} h</strong></div>
-                <div><span>Water</span><strong>{health.water} L</strong></div>
-                <div><span>Diet</span><strong>{health.diet ? 'On plan' : 'Off plan'}</strong></div>
+                <div><span>Sleep</span><strong>{healthLog.sleep} h</strong></div>
+                <div><span>Water</span><strong>{healthLog.water} L</strong></div>
+                <div><span>Diet</span><strong>{healthLog.diet ? 'On plan' : 'Off plan'}</strong></div>
               </div>
             </article>
 
@@ -290,7 +302,7 @@ export function Dashboard() {
             </article>
             <article className="stat-card grad-orange">
               <span className="glass-badge"><CircleDollarSign size={20} /></span>
-              <strong>{money(balance, false)}</strong>
+              <strong>{balancesLabel}</strong>
               <span>Finance</span>
               <small>↑ 12% this month</small>
             </article>
@@ -349,7 +361,7 @@ export function Dashboard() {
 
             <article className="card">
               <header className="card-head">
-                <div><h2>Finance overview</h2><p>{money(balance, false)} this month</p></div>
+                <div><h2>Finance overview</h2><p>{balancesLabel} this month</p></div>
                 <span className="trend">↑ 12%</span>
               </header>
               <div className="bar-chart" aria-label="Monthly finance chart">

@@ -2,33 +2,31 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class RegisterRequest(BaseModel):
-    email: str = Field(min_length=3, max_length=255)
-    name: str = Field(default="", max_length=120)
+    name: str = Field(min_length=2, max_length=120)
     password: str = Field(min_length=8, max_length=128)
 
-    @field_validator("email")
+
+class PasswordResetRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    recovery_code: str = Field(min_length=32, max_length=40)
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("recovery_code")
     @classmethod
-    def normalize_email(cls, value: str) -> str:
-        email = value.strip().lower()
-        local, _, domain = email.partition("@")
-        if not local or "." not in domain:
-            raise ValueError("Enter a valid email address")
-        return email
+    def normalize_recovery_code(cls, value: str) -> str:
+        code = value.replace("-", "").replace(" ", "").upper()
+        if len(code) != 32 or any(char not in "0123456789ABCDEF" for char in code):
+            raise ValueError("Enter a valid recovery code")
+        return code
 
 
 class LoginRequest(BaseModel):
-    email: str
+    name: str
     password: str
-
-    @field_validator("email")
-    @classmethod
-    def normalize_email(cls, value: str) -> str:
-        return value.strip().lower()
 
 
 class UserOut(BaseModel):
     id: str
-    email: str
     name: str
     role: str
 
@@ -39,3 +37,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class RegistrationResponse(TokenResponse):
+    recovery_codes: list[str]

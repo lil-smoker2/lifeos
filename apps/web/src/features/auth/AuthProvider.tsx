@@ -36,12 +36,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(
-    (email: string, password: string) => api.login(email, password).then(applySession),
+    (name: string, password: string) => api.login(name, password).then(applySession),
     [applySession],
   )
 
   const register = useCallback(
-    (name: string, email: string, password: string) => api.register(name, email, password).then(applySession),
+    async (name: string, password: string) => {
+      const response = await api.register(name, password)
+      const user = applySession(response)
+      return { user, recoveryCodes: response.recovery_codes }
+    },
     [applySession],
   )
 
